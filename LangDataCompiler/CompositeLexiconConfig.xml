@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<flow xmlns="http://schemas.microsoft.com/tts/toolsuite">
+    <module type="Microsoft.Tts.Offline.Compiler.LangDataCompilerEnvironment" name="env" skip="false">
+        <input name="Compiler"></input>
+    </module>
+
+    <module type="Microsoft.Tts.Offline.LexiconProcessor.LexiconPruner" name="FreqPrune" skip="false">
+        <input name="Mode">Freq</input>
+        <input name="Lexicon">$env.Lexicon</input>
+        <input name="CutoffFreq">
+          <![CDATA[]]>
+        </input>
+    </module>
+    <module type="Microsoft.Tts.Offline.LexiconProcessor.LexiconProcessor" name="GenerateDomainLexicon" skip="true">
+        <input name="Mode">ExtractDomainLexicon</input>
+        <input name="MainLexicon">$env.CaseInsensitiveLexicon</input>
+        <input name="PhoneSet">$env.PhoneSet</input>
+        <input name="AttribSchema">$env.AttribSchema</input>
+        <input name="ScriptFolder">$env.DomainScriptFolder</input>
+        <input name="DomainListFile">$env.DomainListFile</input>
+        <input name="Pos">noun</input>
+        <input name="MergeMode">KeepAll</input>
+    </module>
+    <module type="Microsoft.Tts.Offline.LexiconProcessor.LexiconProcessor" name="MergeExtraDomainLexicon" skip="true">
+        <input name="Mode">Merge</input>
+        <input name="MainLexicon">$GenerateDomainLexicon.Lexicon</input>
+        <input name="AdditionalLexicon">$env.ExtraDomainLexicon</input>
+        <input name="MergeMode">KeepAll</input>
+    </module>
+    <module type="Microsoft.Tts.Offline.LexiconProcessor.LexiconProcessor" name="MergeDomainLexicon" skip="true">
+        <input name="Mode">Merge</input>
+        <input name="MainLexicon">$FreqPrune.PrunedLexicon</input>
+        <input name="AdditionalLexicon">$MergeExtraDomainLexicon.Lexicon</input>
+        <input name="MergeMode">KeepFirstOne</input>
+    </module>
+    
+    <module type="Microsoft.Tts.Offline.LexiconProcessor.LexiconPruner" name="LtsPrune" skip="false">
+        <input name="Mode">LTS</input>
+        <input name="Compiler">$env.Compiler</input>
+        <input name="Lexicon">$FreqPrune.PrunedLexicon</input>
+        <input name="PosFilter">noun</input>
+        <input name="PronComparisonMode">OnlyPhone</input>
+        <input name="ExceptionWordFile"></input>
+    </module>
+
+    <module type="Microsoft.Tts.Offline.LexiconProcessor.LexiconProcessor" name="MergeRegressionLexicon" skip="false">
+        <input name="Mode">Merge</input>
+        <input name="MainLexicon">$LtsPrune.PrunedLexicon</input>
+        <input name="AdditionalLexicon">$env.RegressionLexicon</input>
+        <input name="MergeMode">KeepLastOne</input>
+    </module>
+
+    <module type="Microsoft.Tts.Offline.LexiconProcessor.LexiconPruner" name="PruningCorrect" skip="false">
+        <input name="Mode">PruningCorrect</input>
+        <input name="Compiler">$env.Compiler</input>
+        <input name="Lexicon">$MergeRegressionLexicon.Lexicon</input>
+        <input name="RemovedLexicon">$LtsPrune.LtsRemovedLexicon</input>
+        <input name="PronComparisonMode">OnlyPhone</input>
+        <input name="VoiceFont"></input>
+        <input name="ExtraDAT"></input>
+    </module>
+    
+    <module type="Microsoft.Tts.Offline.Compiler.LangDataCompilerEnvironment" name="SetLexicon" skip="false">
+        <input name="Compiler">$env.Compiler</input>
+        <input name="SetCompilerLexicon">$PruningCorrect.PrunedLexicon</input>
+    </module>
+</flow>

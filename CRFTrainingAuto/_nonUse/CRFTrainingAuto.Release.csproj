@@ -1,0 +1,69 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(SDROOT)\private\dev\speech\tts\shenzhou\common\Common.Proj.inc" />
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), include.props))\include.props" Condition="'$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), include.props))' != ''" />
+  <PropertyGroup>
+    <ProductVersion>9.0.30729</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{1539897A-7E71-40B4-BB5E-9F9494510D48}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>CRFTrainingAuto</RootNamespace>
+    <AssemblyName>CRFTrainingAuto</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <SPEECH_BUILD_TYPE>Server</SPEECH_BUILD_TYPE>
+    <PDBFolder Condition="'$(OutputType)'=='Library'">dll</PDBFolder>
+    <PDBFolder Condition="'$(OutputType)'=='Exe'">exe</PDBFolder>
+    <PDBFolder Condition="'$(OutputType)'=='WinExe'">exe</PDBFolder>
+    <AssemblyClsCompliant>false</AssemblyClsCompliant>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(BuildArchitecture)'=='amd64'">
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(BuildArchitecture)'=='i386'">
+    <PlatformTarget>x86</PlatformTarget>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Xml" />
+    <ProjectReference Include="$(TTS_ROOT)\tools\offline\src\framework\microsoft.tts.offline\Microsoft.Tts.Offline.csproj" />
+    <Reference Include="$(TTS_OBJ_ROOT)\src\serviceprovider\Engine\Build.Internal\$(O)\ServiceProvider.dll" />
+    <Reference Include="$(TTS_ROOT)\external\speechfx\System.Speech.dll" />
+    <Reference Include="$(TTS_ROOT)\external\office\Microsoft.Office.Interop.Excel.dll" /> 
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Arguments.cs" />
+    <Compile Include="CRFHelper.cs" />
+    <Compile Include="ExcelHelper.cs" />
+    <Compile Include="GlobalVar.cs" />
+    <Compile Include="LocalConfig.cs" />
+    <Compile Include="Program.cs" />
+    <Compile Include="ScriptGenerator.cs" />
+    <Compile Include="Util.cs" />
+    <Compile Include="WordBreaker.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Binplace Include="CRFTrainingAuto.config">
+      <DestinationFolder>$(BinplaceDistribPath)\dev\tts\$(SPEECH_BUILD_TYPE)\bin\Offline\Config</DestinationFolder>
+    </Binplace>
+    <EmbeddedResource Include="CRFTrainingAutoConfig.xsd">
+       <LogicalName>CRFTrainingAuto.CRFTrainingAutoConfig.xsd</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Binplace Include="$(OutputPath)\$(TargetFileName)">
+      <DestinationFolder>$(BinplaceDistribPath)\dev\tts\$(SPEECH_BUILD_TYPE)\bin\Offline</DestinationFolder>
+    </Binplace>
+    <Binplace Include="$(OutputPath)\$(AssemblyName).pdb">
+      <DestinationFolder>$(BinplaceDistribPath)\dev\tts\$(SPEECH_BUILD_TYPE)\bin\symbols.pri\Offline\$(PDBFolder)</DestinationFolder>
+    </Binplace>
+    <Binplace Include="$(OutputPath)\Microsoft.Tts.Offline.dll">
+      <DestinationFolder>$(BinplaceDistribPath)\dev\tts\$(SPEECH_BUILD_TYPE)\bin\frontend</DestinationFolder>
+    </Binplace>
+  </ItemGroup>
+  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" />
+  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), include.targets))\include.targets" Condition="'$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), include.targets))' != ''" />
+</Project>

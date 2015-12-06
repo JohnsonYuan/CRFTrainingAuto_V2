@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://schemas.microsoft.com/tts/toolsuite" xmlns="http://schemas.microsoft.com/tts/toolsuite">
+    <xs:element name="CorpusCleaner">
+        <xs:complexType>
+            <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:element name="CleanCorpus" minOccurs="1" maxOccurs="1">
+                    <xs:complexType>
+                        <xs:attribute use="required" name="dir" type="xs:string" />
+                        <xs:attribute use="required" name="fileSize" type="simpleTypeFileSize" />
+                        <xs:attribute use="optional" name="maxCharNumPerLine" type="xs:positiveInteger" default="5120" />
+                    </xs:complexType>
+                </xs:element>
+                <xs:element name="RawCorpus" minOccurs="1" maxOccurs="1">
+                    <xs:complexType>
+                        <xs:choice minOccurs="0" maxOccurs="unbounded">
+                            <xs:element name="ExcludeFiles" minOccurs="0" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:attribute use="required" name="dir" type="xs:string" />
+                                    <xs:attribute use="required" name="searchPattern" type="xs:string" />
+                                </xs:complexType>
+                            </xs:element>
+                            <xs:element name="CorpusFile" minOccurs="1" maxOccurs="unbounded">
+                                <xs:complexType>
+                                    <xs:choice minOccurs="0" maxOccurs="unbounded">
+                                        <xs:element name="CharRange" minOccurs="1" maxOccurs="1">
+                                            <xs:complexType>
+                                                <xs:choice minOccurs="0" maxOccurs="unbounded">
+                                                    <xs:element name="Include" type="complexTypeCharRangeType">
+                                                    </xs:element>
+                                                    <xs:element name="Exclude" type="complexTypeCharRangeType">
+                                                    </xs:element>
+                                                </xs:choice>
+                                            </xs:complexType>
+                                        </xs:element>
+                                        <xs:element name="LineEndingPunctuation" minOccurs="0" maxOccurs="1">
+                                            <xs:complexType>
+                                                <xs:sequence minOccurs="0" maxOccurs="unbounded">
+                                                    <xs:element name="Punctuation" minOccurs="0" maxOccurs="1">
+                                                        <xs:complexType>
+                                                            <xs:attribute use="required" name="symbol" type="xs:string" />
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:sequence>
+                                                <xs:attribute use="required" name="merge" type="xs:boolean" />
+                                            </xs:complexType>
+                                        </xs:element>
+                                        <xs:element name="RegexRules" minOccurs="0" maxOccurs="1">
+                                            <xs:complexType>
+                                                <xs:choice minOccurs="0" maxOccurs="unbounded">
+                                                    <xs:element name="Replace" minOccurs="0" maxOccurs="unbounded">
+                                                        <xs:complexType>
+                                                            <xs:sequence />
+                                                            <xs:attribute use="required" name="pattern" type="xs:string" />
+                                                            <xs:attribute use="required" name="replacement" type="xs:string" />
+                                                            <xs:attribute use="optional" name="beforeMerge" type="xs:boolean" />
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                    <xs:element name="Delete" minOccurs="0" maxOccurs="unbounded">
+                                                        <xs:complexType>
+                                                            <xs:sequence />
+                                                            <xs:attribute use="required" name="pattern" type="xs:string" />
+                                                            <xs:attribute use="required" name="deleteLine" type="xs:boolean" />
+                                                            <xs:attribute use="optional" name="beforeMerge" type="xs:boolean" />
+                                                        </xs:complexType>
+                                                    </xs:element>
+                                                </xs:choice>
+                                            </xs:complexType>
+                                        </xs:element>
+                                    </xs:choice>
+                                    <xs:attribute use="required" name="type" type="xs:string" />
+                                    <!--Default is Unicode-->
+                                    <xs:attribute use="optional" default="1200" name="codePage" type="xs:unsignedInt" />
+                                    <xs:attribute use="required" name="searchPatterns" type="xs:string" />
+                                    <xs:attribute use="required" name="removeDuplicateLine" type="xs:boolean" />
+                                </xs:complexType>
+                            </xs:element>
+                        </xs:choice>
+                        <xs:attribute use="required" name="dir" type="xs:string" />
+                    </xs:complexType>
+                </xs:element>
+            </xs:choice>
+        </xs:complexType>
+    </xs:element>
+    <xs:complexType name="complexTypeCharRangeType">
+        <xs:sequence>
+            <xs:element name="Range" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:attribute use="required" name="from" type="xs:string" />
+                    <xs:attribute use="required" name="to" type="xs:string" />
+                </xs:complexType>
+            </xs:element>
+            <xs:element name="Chars" minOccurs="0" maxOccurs="unbounded">
+                <xs:complexType>
+                    <xs:attribute use="required" name="symbol" type="xs:string" />
+                </xs:complexType>
+            </xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:simpleType name="simpleTypeFileSize">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="[0-9]{1,3}[MmKk]" />
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>
