@@ -93,9 +93,23 @@
         /// </summary>
         /// <param name="contents"></param>
         /// <returns>string</returns>
-        public static string SpaceSeparate(this string[] contents)
+        public static string SpaceSeparate(this string[] wbResult)
         {
             return string.Join(" ", contents);
+        }
+
+        /// <summary>
+        /// Combile word break result to string
+        /// </summary>
+        /// <example>
+        /// input: 120 平米 城市 庭院 别墅
+        /// output:120平米城市庭院别墅
+        /// </example>
+        /// <param name="contents"></param>
+        /// <returns>string</returns>
+        public static string CombileToString(this string[] wbResult)
+        {
+            return string.Join("", wbResult);
         }
 
         /// <summary>

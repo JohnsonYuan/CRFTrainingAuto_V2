@@ -352,16 +352,20 @@
             {
                 while (reader.Peek() > -1)
                 {
+                    // this method cannot remove unicode 8195(empty char)
+                    // E:\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\tools\Offline\src\Framework\Microsoft.Tts.Offline\Compiler\LangDataCompiler.cs 
+                    // E:\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\tools\Offline\src\Framework\Microsoft.Tts.Offline\Frontend\PolyphonyRuleFile.cs 
                     string caseLine = reader.ReadLine().Trim().Replace(" ", "").Replace("\t", "");
 
                     if (hasWbResult)
                     {
                         if (reader.Peek() > -1)
                         {
+                            var wbResult = reader.ReadLine().Trim().Split(new char[] { ' ' });
                             results.Add(new SentenceAndWbResult
                             {
-                                Content = caseLine,
-                                WbResult = reader.ReadLine().Trim().Split(new char[] { ' ' })
+                                Content = wbResult.CombileToString(),
+                                WbResult = wbResult
                             });
                         }
                         else
