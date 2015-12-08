@@ -43,10 +43,9 @@
             GlobalVar gv = null;
             if (!string.IsNullOrEmpty(arguments.ConfigPath))
             {
-                LocalConfig config = new LocalConfig();
-                config.Load(arguments.ConfigPath);
+                LocalConfig.Create(arguments.ConfigPath);
 
-                gv = new GlobalVar(config);
+                gv = new GlobalVar(LocalConfig.Instance);
             }
 
             CRFHelper crfHelper = new CRFHelper();
@@ -75,7 +74,8 @@
                     break;
                 case Arguments.ExecuteMode.GenXls:
                     // InputPath is txt file path, OutputPath is excel file path
-                    ExcelHelper.GenExcelFromTxtFile(arguments.InputPath, arguments.OutputPath, arguments.IsNeedWb > 0);
+                    // if IsNeedWb == 0, the word break result is in input file, otherwise, use word break genereate word break result
+                    ExcelHelper.GenExcelFromTxtFile(arguments.InputPath, arguments.OutputPath, arguments.IsNeedWb == 0);
                     break;
                 case Arguments.ExecuteMode.GenTrain:
                 case Arguments.ExecuteMode.GenTest:

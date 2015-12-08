@@ -14,7 +14,13 @@
     /// </summary>
     public class WordBreaker : IDisposable
     {
+        #region Fields
+
         private SP.TtsEngine _engine;
+
+        #endregion
+
+        #region Constructor
 
         /// <summary>
         /// Initializes a new instance of the <see cref="WordBreaker"/> class.
@@ -29,6 +35,21 @@
             _engine.PipelineMode = SP.ModulePipelineMode.PM_TEXT_ANALYSIS;
         }
 
+        #endregion
+
+        #region Properties
+        public SP.TtsEngine TtsEngine
+        {
+            get
+            {
+                return _engine;
+            }
+        }
+
+        #endregion
+
+        #region IDisposable Members
+
         /// <summary>
         /// Dispose
         /// </summary>
@@ -38,7 +59,10 @@
             Dispose(true);
         }
 
-        // The bulk of the clean-up code is implemented in Dispose(bool)
+        /// <summary>
+        /// Dispose
+        /// </summary>
+        /// <param name="disposing">true or false</param>
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
@@ -47,13 +71,9 @@
             }
         }
 
-        public SP.TtsEngine TtsEngine
-        {
-            get
-            {
-                return _engine;
-            }
-        }
+        #endregion
+
+        #region Public Method
 
         /// <summary>
         /// Get TtsUtterance
@@ -148,8 +168,13 @@
         {
             return new WordBreaker(config.Lang, config.LangDataPath);
         }
+
+        #endregion
     }
 
+    /// <summary>
+    /// Sentence breaker
+    /// </summary>
     public class SentenceBreaker
     {
         // the messy part are full-width ! and ?

@@ -136,6 +136,7 @@
                     {
                         ++ProcessedFileCount;
                     }
+
                     Console.WriteLine("File " + fileName + " exist, skipped!");
                     continue;
                 }
@@ -184,7 +185,7 @@
                         if (useWbResult &&
                             wbReader.Peek() > -1)
                         {
-                            wbResult = wbReader.ReadLine().Split(new char[] { ' ' });
+                            wbResult = wbReader.ReadLine().SplitBySpace();
 
                             if (!results.Contains(sentence) &&
                                    sentence.GetSingleCharIndexOfLine(GlobalVar.Config.CharName, wbResult) > -1)

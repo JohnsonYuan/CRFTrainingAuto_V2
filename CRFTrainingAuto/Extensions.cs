@@ -95,7 +95,7 @@
         /// <returns>string</returns>
         public static string SpaceSeparate(this string[] wbResult)
         {
-            return string.Join(" ", contents);
+            return string.Join(" ", wbResult);
         }
 
         /// <summary>
@@ -107,7 +107,7 @@
         /// </example>
         /// <param name="contents"></param>
         /// <returns>string</returns>
-        public static string CombileToString(this string[] wbResult)
+        public static string ConcatToString(this string[] wbResult)
         {
             return string.Join("", wbResult);
         }
@@ -119,7 +119,7 @@
         /// <returns>string</returns>
         public static string[] SplitBySpace(this string content)
         {
-            return content.Split(new char[] { ' ' });
+            return content.Trim().Split(new char[] { ' ' });
         }
     }
 

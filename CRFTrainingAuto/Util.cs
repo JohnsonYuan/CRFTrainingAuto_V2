@@ -355,16 +355,20 @@
                     // this method cannot remove unicode 8195(empty char)
                     // E:\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\tools\Offline\src\Framework\Microsoft.Tts.Offline\Compiler\LangDataCompiler.cs 
                     // E:\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\tools\Offline\src\Framework\Microsoft.Tts.Offline\Frontend\PolyphonyRuleFile.cs 
+                    
                     string caseLine = reader.ReadLine().Trim().Replace(" ", "").Replace("\t", "");
+
+                    // TODO : add comment this line
+                    // reader.ReadLine();
 
                     if (hasWbResult)
                     {
                         if (reader.Peek() > -1)
                         {
-                            var wbResult = reader.ReadLine().Trim().Split(new char[] { ' ' });
+                            var wbResult = reader.ReadLine().SplitBySpace();
                             results.Add(new SentenceAndWbResult
                             {
-                                Content = wbResult.CombileToString(),
+                                Content = wbResult.ConcatToString(),
                                 WbResult = wbResult
                             });
                         }
@@ -375,10 +379,11 @@
                     }
                     else
                     {
+                        var wbResult = GlobalVar.WordBreaker.BreakWords(caseLine);
                         results.Add(new SentenceAndWbResult
                         {
-                            Content = caseLine,
-                            WbResult = GlobalVar.WordBreaker.BreakWords(caseLine)
+                            Content = wbResult.ConcatToString(),
+                            WbResult = wbResult
                         });
                     }
                 }

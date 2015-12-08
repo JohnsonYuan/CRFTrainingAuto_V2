@@ -475,8 +475,8 @@
         /// </summary>
         /// <param name="inFilePath">txt file path</param>
         /// <param name="outputDir">output file path</param>
-        /// <param name="isNeedWb">if true, need wrod breaker genereate the word break result, false the input file contains the word break result</param>
-        public static void GenExcelFromTxtFile(string inFilePath, string outputFilePath, bool isNeedWb = false)
+        /// <param name="isNeedWb">if true, need use wrod breaker genereate the word break result, false the input file contains the word break result</param>
+        public static void GenExcelFromTxtFile(string inFilePath, string outputFilePath, bool hasWbResult = true)
         {
             Console.WriteLine("Generating excel from " + inFilePath);
 
@@ -506,7 +506,7 @@
                 xlWorkSheet.Cells[1, GlobalVar.ExcelCommentColIndex] = GlobalVar.ExcelCorrectPronColTitle;
                 xlWorkSheet.Cells[1, GlobalVar.ExcelWbColIndex] = GlobalVar.ExcelWbColTitle;
 
-                var allCases = Util.GetSenAndWbFromCorpus(inFilePath, isNeedWb);
+                var allCases = Util.GetSenAndWbFromCorpus(inFilePath, hasWbResult);
                 
                 // Excel start index is 1, the content row start 2
                 int rowIndex = 2;

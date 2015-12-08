@@ -11,7 +11,15 @@
     using System.Xml.Schema;
     public class LocalConfig : XmlDataFile
     {
-        #region fields
+        #region Static fields
+
+        private static volatile LocalConfig _instance;
+        private static object _locker = new object();
+
+        #endregion
+
+        #region Fields
+
         // target\distrib\debug\{amd64/x86}\dev\TTS\Server\bin\Offline
         private string OfflineToolPathPattern = @"target\distrib\debug\{0}\dev\TTS\Server\bin\Offline";
         // private\dev\speech\tts\shenzhou\data\zh-CN\Language\Model.Rule\PolyphonyModel\ModelUsed
@@ -41,19 +49,21 @@
         private static XmlSchema _schema;
         #endregion
 
-        #region Constructors
+        #region Constructor
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="LocalConfig"/> class.
+        /// Initializes a new instance of the LocalConfig class
         /// </summary>
-        public LocalConfig()
+        /// <param name="configPath">xml config file path</param>
+        private LocalConfig(string configFilePath)
         {
-
+            base.Load(configFilePath);
         }
 
         #endregion
 
         #region Properties
+
         /// <summary>
         /// Gets corpusCleanerConfig schema.
         /// </summary>
@@ -148,6 +158,7 @@
                 return _minCaseLength;
             }
         }
+
         /// <summary>
         /// Max case count used to train crf model
         /// </summary>
@@ -285,7 +296,7 @@
         }
         #endregion
 
-        #region method
+        #region Methods
 
         /// <summary>
         /// Load XML file.
@@ -489,6 +500,43 @@
                 }
             }
             #endregion
+        }
+
+        /// <summary>
+        /// Init _instance when _instance is null, support multithread Singleton
+        /// </summary>
+        /// <param name="configFilePath">xml config file path</param>
+        public static void Create(string configFilePath)
+        {
+            if (_instance == null)
+            {
+                lock (_locker)
+                {
+                    if (_instance == null)
+                    {
+                        _instance = new LocalConfig(configFilePath);
+                    }
+                }
+            }
+            else
+            {
+                throw new Exception("Object already created");
+            }
+        }
+        /// <summary>
+        /// LocalConfig instance
+        /// </summary>
+        public static LocalConfig Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    throw new Exception("Object not created");
+                }
+
+                return _instance;
+            }
         }
 
         #endregion
