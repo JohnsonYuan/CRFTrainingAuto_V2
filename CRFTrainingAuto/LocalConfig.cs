@@ -26,6 +26,8 @@
         private string CRFModelDirPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Language\Model.Rule\PolyphonyModel\ModelUsed";
         // private\dev\speech\tts\shenzhou\src\lochand\ZhCN\MSTTSLocZhCN.dat
         private string LangDataPathPattern = @"private\dev\speech\tts\shenzhou\src\lochand\{0}\MSTTSLoc{0}.dat";
+        // private\dev\speech\tts\shenzhou\data\zh-CN\Language\Model.Rule\Polyphony\polyrule.txt
+        private string PolyRuleFilePathPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Language\Model.Rule\Polyphony\polyrule.txt";
 
         private string _charName;
         private Language _lang;
@@ -42,6 +44,7 @@
         private string _arch;
         private string _offlineToolPath;
         private string _langDataPath;
+        private string _polyRuleFilePath;
         private int _maxThreadCount;
         private string _trainingConfigTemplate;
         private string _featuresConfigTemplate;
@@ -248,6 +251,17 @@
         }
 
         /// <summary>
+        /// polyrule.txt file path
+        /// </summary>
+        public string PolyRuleFilePath
+        {
+            get
+            {
+                return _polyRuleFilePath;
+            }
+        }
+
+        /// <summary>
         /// Max thread count when filtering char from corpus
         /// </summary>
         public int MaxThreadCount
@@ -450,6 +464,9 @@
 
                 _langDataPath = Path.Combine(_branchRootPath, string.Format(LangDataPathPattern, Localor.LanguageToString(_lang).Replace("-", "")));
                 Helper.ThrowIfFileNotExist(_langDataPath);
+                
+                _polyRuleFilePath = Path.Combine(_branchRootPath, string.Format(PolyRuleFilePathPattern, Localor.LanguageToString(_lang).Replace("-", "")));
+                Helper.ThrowIfFileNotExist(_polyRuleFilePath);
             }
 
             node = xmlDoc.SelectSingleNode("//tts:MaxThreadCount", nsmgr);
@@ -522,7 +539,8 @@
             {
                 throw new Exception("Object already created");
             }
-        }
+        }
+
         /// <summary>
         /// LocalConfig instance
         /// </summary>

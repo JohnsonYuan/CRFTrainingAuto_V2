@@ -279,6 +279,7 @@
                             reader.ReadLine();
                         }
 
+
                         sb.Append(newLineValue + Environment.NewLine);
                     }
                     else
@@ -352,19 +353,14 @@
             {
                 while (reader.Peek() > -1)
                 {
-                    // this method cannot remove unicode 8195(empty char)
-                    // E:\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\tools\Offline\src\Framework\Microsoft.Tts.Offline\Compiler\LangDataCompiler.cs 
-                    // E:\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\tools\Offline\src\Framework\Microsoft.Tts.Offline\Frontend\PolyphonyRuleFile.cs 
-                    
-                    string caseLine = reader.ReadLine().Trim().Replace(" ", "").Replace("\t", "");
-
-                    // TODO : add comment this line
-                    // reader.ReadLine();
+                    string caseLine = reader.ReadLine().Trim();
 
                     if (hasWbResult)
                     {
                         if (reader.Peek() > -1)
                         {
+                            // we use the wbResult to generate the case, because we have to remove empty part
+                            // in the case, and it's hard to list all space possibility, like space, tab, or unicode empty char(8195)
                             var wbResult = reader.ReadLine().SplitBySpace();
                             results.Add(new SentenceAndWbResult
                             {
@@ -390,6 +386,66 @@
             }
 
             return results;
+        }
+
+        /// <summary>
+        /// Get case and pron from bug fixing file
+        /// </summary>
+        /// <param name="inputFilePath">bug fixing file path
+        /// file format is like below
+        /// 我还差你五元钱。	ch a_h a_l
+        /// 我们离父母的希望还差很远。	ch a_h a_l
+        /// </param>
+        /// <param name="hasWbResult"></param>
+        /// <returns></returns>
+        public static IDictionary<string, string> GetSenAndPronFromBugFixingFile(string inputFilePath)
+        {
+            IDictionary < string, string> senAndProns = new Dictionary<string, string>();
+
+            using (StreamReader reader = new StreamReader(inputFilePath))
+            {
+                int lineNumber = 1;
+                while (reader.Peek() > -1)
+                {
+                    string line = reader.ReadLine();
+                    if(!string.IsNullOrEmpty(line))
+                    {
+                        string[] caseAndPron = line.Trim().Split(new char[] { '\t' });
+                        if (caseAndPron.Length != 2)
+                        {
+                            throw new Exception(string.Format("{0} file at line {1} has the wrong format!", inputFilePath, lineNumber));
+                        }
+
+                        string sentence = caseAndPron[0];
+                        if(string.IsNullOrEmpty(sentence))
+                        {
+                            throw new Exception(string.Format("{0} file at line {1} has the empty sentence!", inputFilePath, lineNumber));
+                        }
+
+                        if (sentence.GetSingleCharIndexOfLine(GlobalVar.Config.CharName, GlobalVar.WordBreaker) == -1)
+                        {
+                            throw new Exception(string.Format("{0} file at line {1} has the wrong sentence!", inputFilePath, lineNumber));
+                        }
+
+                        sentence = sentence.Trim();
+
+                        string pinYinPron = caseAndPron[1];
+
+                        if ((GlobalVar.Config.Prons.ContainsKey(pinYinPron) &&
+                            !string.IsNullOrEmpty(GlobalVar.Config.Prons[pinYinPron])))
+                        {
+                            senAndProns.Add(sentence, pinYinPron);
+                        }
+                        else
+                        {
+                            throw new Exception(string.Format("{0} file at line {1} has the wrong pronunciation!", inputFilePath, lineNumber));
+                        }
+                    }
+                    ++lineNumber;
+                }
+            }
+
+            return senAndProns;
         }
     }
 }

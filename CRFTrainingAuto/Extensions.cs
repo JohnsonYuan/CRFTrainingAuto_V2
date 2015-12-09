@@ -40,13 +40,8 @@
                 {
                     return index;
                 }
-
-                // if foundCount == 1, then we return the index, else return -1
-                if (foundCount == 1)
-                {
-                    return index;
-                }
             }
+
             return -1;
         }
 
@@ -95,7 +90,14 @@
         /// <returns>string</returns>
         public static string SpaceSeparate(this string[] wbResult)
         {
-            return string.Join(" ", wbResult);
+            if (wbResult != null && wbResult.Length > 0)
+            {
+                return string.Join(" ", wbResult);
+            }
+            else
+            {
+                return string.Empty;
+            }
         }
 
         /// <summary>
@@ -109,16 +111,28 @@
         /// <returns>string</returns>
         public static string ConcatToString(this string[] wbResult)
         {
-            return string.Join("", wbResult);
+            if (wbResult != null && wbResult.Length > 0)
+            {
+                return string.Join("", wbResult);
+            }
+            else
+            {
+                return string.Empty;
+            }
         }
 
         /// <summary>
         /// Get a space separated result from array
         /// </summary>
-        /// <param name="contents"></param>
-        /// <returns>string</returns>
+        /// <param name="contents">sentence</param>
+        /// <returns>space separated sentence</returns>
         public static string[] SplitBySpace(this string content)
         {
+            if (string.IsNullOrEmpty(content))
+            {
+                return null;
+            }
+
             return content.Trim().Split(new char[] { ' ' });
         }
     }

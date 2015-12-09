@@ -234,7 +234,6 @@
                         XmlNodeList list = doc.DocumentElement.ChildNodes;
                         if (list != null && list.Count > 0)
                         {
-                            // if convert failed, the start index should be 1
                             startId = Convert.ToInt32(list.Item(list.Count - 1).Attributes["id"].Value) + 1;
                         }
                     }

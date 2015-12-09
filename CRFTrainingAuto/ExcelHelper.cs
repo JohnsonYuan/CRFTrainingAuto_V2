@@ -27,7 +27,14 @@
                 string caseVal = Convert.ToString((usedRange.Cells[rCnt, GlobalVar.ExcelCaseColIndex] as Excel.Range).Value2);
                 tempReseult.Content = caseVal.Replace(" ", "").Replace("\t", "");
                 string wbResult = Convert.ToString((usedRange.Cells[rCnt, GlobalVar.ExcelWbColIndex] as Excel.Range).Value2);
-                tempReseult.WbResult = wbResult.SplitBySpace();
+                if (!string.IsNullOrEmpty(wbResult))
+                {
+                    tempReseult.WbResult = wbResult.SplitBySpace();
+                }
+                else
+                {
+                    tempReseult.WbResult = GlobalVar.WordBreaker.BreakWords(caseVal);
+                }
                 
                 string pinYinPron = Convert.ToString((usedRange.Cells[rCnt, GlobalVar.ExcelCorrectPronColIndex] as Excel.Range).Value2);
                 if (string.IsNullOrWhiteSpace(pinYinPron))

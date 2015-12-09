@@ -26,20 +26,20 @@ namespace CRFTrainingAuto
     {
         #region Fields used by command line parser
 
-        [Argument("mode", Description = "Specifies the execute mode: FilterChar, CompileAndTest, NCRF, GenVerify, GenXlsTestReport, GenXls, GenTrain, GenTest,WB, SS, Split, Merge",
-            Optional = false, UsagePlaceholder = "executeMode", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, WB, SS, Split, Merge, Rand")]
+        [Argument("mode", Description = "Specifies the execute mode: FilterChar, CompileAndTest, NCRF, GenVerify, GenXlsTestReport, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge",
+            Optional = false, UsagePlaceholder = "executeMode", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge, Rand")]
         private string _mode = string.Empty;
 
         [Argument("config", Description = "config file path",
-            Optional = false, UsagePlaceholder = "configPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, WB, SS, Merge, Rand")]
+            Optional = false, UsagePlaceholder = "configPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Merge, Rand")]
         private string _configPath = string.Empty;
 
         [Argument("i", Description = "input path",
-            Optional = true, UsagePlaceholder = "inputPath", RequiredModes = "FilterChar, NCRF, GenVerify, Compile, GenXlsTestReport, GenXls, GenTrain, GenTest, WB, SS, Split, Merge, Rand")]
+            Optional = true, UsagePlaceholder = "inputPath", RequiredModes = "FilterChar, NCRF, GenVerify, Compile, GenXlsTestReport, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge, Rand")]
         private string _inputPath = string.Empty;
 
         [Argument("o", Description = "output path",
-            Optional = true, UsagePlaceholder = "outputPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXls, GenTrain, GenTest, WB, SS, Split, Merge, Rand")]
+            Optional = true, UsagePlaceholder = "outputPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge, Rand")]
         private string _outputPath = string.Empty;
 
         [Argument("wbFolder", Description = "word break result folder",
@@ -111,9 +111,14 @@ namespace CRFTrainingAuto
             GenTrain,
 
             /// <summary>
-            /// Generate test   case script
+            /// Generate test case script
             /// </summary>
             GenTest,
+
+            /// <summary>
+            /// Add bug fixing items to the new crf model and retrain the data
+            /// </summary>
+            BugFixing,
 
             /// <summary>
             /// Word break
@@ -301,6 +306,15 @@ namespace CRFTrainingAuto
                     }
 
                     if (!IsMatchFileExtension(_outputPath, XmlFileExtension, ref msg, false))
+                    {
+                        yield return msg;
+                    }
+                    break;
+                case ExecuteMode.BugFixing:
+                    // use txt file for bugfixing, the format is like this
+                    // 我还差你五元钱。	cha4
+                    // 我们离父母的希望还差很远。	cha4
+                    if (!IsMatchFileExtension(_inputPath, TxtFileExtension, ref msg))
                     {
                         yield return msg;
                     }

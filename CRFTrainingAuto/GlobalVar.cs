@@ -89,6 +89,8 @@
         internal const string TrainingConfigNamespace = "http://schemas.microsoft.com/tts/toolsuite";
         internal const string FeatureConfigFileName = "features.config";
 
+        internal const int BugFixingXmlStartIndex = 1000000000;
+        internal const string BugFixingFileName = "bugfixing.xml";
         internal const string ScriptFileName = "script.xml";
         internal const string TrainingFileName = "training.xml";
         internal const string TestFileName = "testing.xml";

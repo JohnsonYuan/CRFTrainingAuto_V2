@@ -85,6 +85,10 @@
                     string filename = Path.GetFileName(arguments.OutputPath);
                     ScriptGenerator.GenScript(arguments.InputPath, action, folder, filename, arguments.StartIndexOrFilePath);
                     break;
+                case Arguments.ExecuteMode.BugFixing:
+                    // InputPath is txt file path
+                    crfHelper.AppendTrainingScriptAndReRunTest(arguments.InputPath, arguments.OutputPath);
+                    break;
                 case Arguments.ExecuteMode.WB:
                     // InputPath is wildcard file path, OutputPath is folder path
                     crfHelper.DoWordBreak(arguments.InputPath, arguments.OutputPath);

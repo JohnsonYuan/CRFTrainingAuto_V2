@@ -536,6 +536,88 @@
         }
 
         /// <summary>
+        /// Generate training script to training folder and recompile and rerun the test and generate report
+        /// </summary>
+        /// <param name="bugFixingFilePath">bug fixing file (tab separate each line)
+        /// 我还差你五元钱。	cha4
+        /// 我们离父母的希望还差很远。cha4
+        /// </param>
+        /// <param name="outputDir">folder contains training.config, training folder must exist under outputDir</param>
+        public void AppendTrainingScriptAndReRunTest(string bugFixingFilePath, string outputDir)
+        {
+            string trainingFolder = Path.Combine(outputDir, GlobalVar.TrainingFolderName);
+
+            Helper.ThrowIfDirectoryNotExist(trainingFolder);
+
+            string bugFixingFile = Path.Combine(trainingFolder, GlobalVar.BugFixingFileName);
+
+            XmlScriptFile results = new XmlScriptFile(GlobalVar.Config.Lang);
+            int startId = GlobalVar.BugFixingXmlStartIndex + 1;
+
+            if (File.Exists(bugFixingFile))
+            {
+                XmlDocument doc = new XmlDocument();
+                doc.Load(bugFixingFile);
+                XmlNodeList list = doc.DocumentElement.ChildNodes;
+                if (list != null && list.Count > 0)
+                {
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        string testCase = list[i].SelectSingleNode("text").InnerText;
+                        if (string.IsNullOrEmpty(testCase))
+                        {
+                            throw new Exception("Test case in line " + (i + 1) + " is empty!");
+                        }
+
+                        results.Items.Add(ScriptGenerator.GenerateScriptItem(testCase));
+
+                        if (i == list.Count - 1)
+                        {
+                            startId = Convert.ToInt32(list.Item(list.Count - 1).Attributes["id"].Value) + 1;
+                        }
+                    }
+                }
+            }
+
+            // append the cases
+            var senAndProns = Util.GetSenAndPronFromBugFixingFile(bugFixingFilePath);
+
+            foreach (var senAndPron in senAndProns)
+            {
+                ScriptItem item = ScriptGenerator.GenerateScriptItem(senAndPron.Key);
+
+                ScriptWord charWord = item.AllWords.FirstOrDefault(p => p.Grapheme.Equals(GlobalVar.Config.CharName, StringComparison.InvariantCultureIgnoreCase));
+
+                if (charWord != null)
+                {
+                    charWord.Pronunciation = senAndPron.Value;
+
+                    item.Id = string.Format("{0:D10}", startId);
+
+                    // make sure each word contains pron, if not, use the default pron
+                    foreach (ScriptWord word in item.AllWords)
+                    {
+                        // force to provide pronunciation when training, it's necessary for training crf model
+                        if (string.IsNullOrEmpty(word.Pronunciation))
+                        {
+                            word.Pronunciation = GlobalVar.Config.DefaultWordPron;
+                            word.WordType = WordType.Normal;
+                        }
+                    }
+
+                    results.Items.Add(item);
+                    ++startId;
+                }
+            }
+
+            results.Save(bugFixingFile, System.Text.Encoding.Unicode);
+
+            Console.WriteLine("Generate bug fixing file " + bugFixingFile);
+
+
+        }
+
+        /// <summary>
         /// Generate report from all testResults
         /// </summary>
         /// <example>
@@ -605,7 +687,7 @@
                 double diff = radios[i - 1] - aveRadio;
                 int trainCount = Convert.ToInt32(GlobalVar.Config.NCrossCaseCount * 0.9);
                 int testCount = GlobalVar.Config.NCrossCaseCount - trainCount;
-                reportResults.Add(string.Format("Set{0}\t{1}\t{2}\t{3}\t{4:00.00}", i, trainCount, testCount, radios[i - 1], diff));
+                reportResults.Add(string.Format("Set{0}\t{1}\t{2}\t{3:00.00}\t{4:00.00}", i, trainCount, testCount, radios[i - 1], diff));
             }
 
             reportResults.Add("");
@@ -724,9 +806,9 @@
         /// </summary>
         /// <param name="crfFilePath">trained crf file</param>
         /// <param name="crfModelDir">crf model folder</param>
-        /// <param name="outputDir">data file output folder</param>
-        /// <returns>generated dat fiel path</returns>
-        public bool CompileLangData(string crfFilePath, string crfModelDir, string outputDir, out string generatedFilePath)
+        public bool CompileLangData(string crfFilePath, string crfModelDir, string outputDir, out string generatedFilePath)        /// <param name="outputDir">data file output folder</param>
+                                                                                                                                   /// <returns>generated dat fiel path</returns>
+
         {
             string message;
             // use the langDataPath
@@ -767,8 +849,6 @@
             {
                 SdCommand.SdCheckoutFile(destCrfFilePath, out message);
                 Util.ConsoleOutTextColor(message);
-
-                SdCommand.SdRevertUnchangedFile(destCrfFilePath, out message);
             }
 
             File.Copy(crfFilePath, Path.Combine(crfModelDir, Path.GetFileName(crfFilePath)), true);
@@ -782,26 +862,30 @@
 
             #endregion
 
-            // TODO: verify the polyrule.txt file
+            #region Update polyrule.txt file
 
+            UpdatePolyRuleFile(GlobalVar.Config.PolyRuleFilePath, GlobalVar.Config.CharName);
 
-            // Edit the CRFLocalizedMapping.txt file
-            string crfModelNameMappingFile = Path.Combine(new DirectoryInfo(crfModelDir).Parent.FullName, "CRFLocalizedMapping.txt");
+            #endregion
 
-            if (File.Exists(crfModelNameMappingFile))
-            {
-                SdCommand.SdCheckoutFile(crfModelNameMappingFile, out message);
-                Console.WriteLine(message);
+            #region Update CRFLocalizedMapping.txt file
 
-                // edit the mapping file
-                UpdateCRFModelMappingFile(crfModelNameMappingFile, Path.GetFileName(crfFilePath), GlobalVar.Config.UsingInfo);
+            string crfMappingFilePath = Path.Combine(new DirectoryInfo(crfModelDir).Parent.FullName, "CRFLocalizedMapping.txt");
 
-                SdCommand.SdRevertUnchangedFile(crfModelNameMappingFile, out message);
-            }
-            else
-            {
-                throw new FileNotFoundException(crfModelNameMappingFile + " not found.");
-            }
+            Helper.ThrowIfFileNotExist(crfMappingFilePath);
+
+            SdCommand.SdCheckoutFile(crfMappingFilePath, out message);
+            Console.WriteLine(message);
+
+            // edit the mapping file
+            UpdateCRFModelMappingFile(crfMappingFilePath, Path.GetFileName(crfFilePath), GlobalVar.Config.UsingInfo);
+
+            SdCommand.SdRevertUnchangedFile(crfMappingFilePath, out message);
+
+            // TODO check ModelUsed folder
+            #endregion
+
+            #region Compile
 
             string tempCRFBinFile;
 
@@ -818,6 +902,8 @@
             // delete the temp file
             File.Delete(tempCRFBinFile);
 
+            #endregion
+
             return File.Exists(generatedFilePath);
         }
 
@@ -830,6 +916,11 @@
         /// <returns>success or not</returns>
         private static bool CompileCRF(string crfModelDir, Language lang, out string crfBinFile)
         {
+            // TODO
+            // E:\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\tools\Offline\src\Framework\Microsoft.Tts.Offline\Compiler\LangDataCompiler.cs 
+            // E:\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\tools\Offline\src\Framework\Microsoft.Tts.Offline\Frontend\PolyphonyRuleFile.cs 
+
+
             MemoryStream outputStream = new MemoryStream();
             FileStream fs = null;
             try
@@ -879,6 +970,73 @@
         }
 
         /// <summary>
+        /// Update polyrule.txt for specific char
+        /// Delete "All >= 0" line if polyrule.txt file contains
+        /// 
+        /// polyrule.txt is like below, we should remove All >= 0 : "b eh_h i_l"; to make CRF model working
+        /// CurW = "背";
+        /// PrevW = "肩" : "b eh_h i_h";
+        /// PrevW = "越" : "b eh_h i_h";
+        /// All >= 0 : "b eh_h i_l";
+        /// </summary>
+        /// <param name="filePath">poly rule file path</param>
+        /// <param name="charName">char name</param>
+        public void UpdatePolyRuleFile(string filePath, string charName)
+        {
+            Helper.ThrowIfFileNotExist(filePath);
+            Helper.ThrowIfNull(charName);
+
+            int lineNumber = 1;
+            bool needModify = true;
+
+            string currentChar = "";
+            string prevChar = "";
+            // TODO: update function
+            //using (StreamReader reader = new StreamReader(filePath))
+            //{
+            //    for (string line = reader.ReadLine(); line != null; line = reader.ReadLine())
+            //    {
+            //            string[] mapping = line.Trim().Split('\t');
+
+            //            if (mapping.Length != 4)
+            //            {
+            //                throw new FormatException(string.Format("{0} mapping file has the wrong format!", filePath));
+            //            }
+
+            //            string currentChar = mapping[0];
+            //            string currentCRFFile = mapping[2];
+            //            string currentUsingInfo = mapping[3];
+
+            //            // if current line's char is same with charName para, check whether need to modify this line
+            //            if (string.Equals(currentChar, GlobalVar.Config.CharName))
+            //            {
+            //                // if crf file name and using info are same, don't modify
+            //                // else edit thie line
+            //                if (string.Equals(currentCRFFile, crfFileName) &&
+            //                    string.Equals(currentUsingInfo, usingInfo))
+            //                {
+            //                    needModify = false;
+            //                    break;
+            //                }
+            //                else
+            //                {
+            //                    charExist = true;
+            //                    break;
+            //                }
+            //            }
+
+            //        ++lineNumber;
+            //    }
+            //}
+
+            //if (needModify)
+            //{
+            //    string content = string.Format("{0}\t->\t{1}\t{2}", GlobalVar.Config.CharName, crfFileName, usingInfo);
+            //    Util.EditLineInFile(filePath, lineNumber, content, !charExist);
+            //}
+        }
+
+        /// <summary>
         /// Load CRF model name mapping(model name and localized name).
         /// </summary>
         /// <example>
@@ -891,10 +1049,10 @@
         /// 行	->	hang.crf	Being_used
         /// 系	->	xi.crf	Unused
         /// </example>
-        /// <param name="mappingFile">crf mapping File Path.</param>
+        /// <param name="filePath">crf mapping File Path.</param>
         /// <param name="crfFileName">crf file name</param>
         /// <param name="usingInfo">check the char whether to be used, in mapping file "Being_used" or "Unused"</param>
-        public void UpdateCRFModelMappingFile(string mappingFile, string crfFileName, string usingInfo)
+        public void UpdateCRFModelMappingFile(string filePath, string crfFileName, string usingInfo)
         {
             if (!string.Equals(usingInfo, "Being_used") && !string.Equals(usingInfo, "Unused"))
             {
@@ -909,7 +1067,7 @@
             bool needModify = true;
             bool charExist = false;
 
-            using (StreamReader reader = new StreamReader(mappingFile))
+            using (StreamReader reader = new StreamReader(filePath))
             {
                 for (string line = reader.ReadLine(); line != null; line = reader.ReadLine())
                 {
@@ -917,7 +1075,7 @@
                     if (lineNumber == 1 &&
                         !string.Equals(MappingFlag, line))
                     {
-                        throw new FormatException(string.Format("{0} mapping file has the wrong format!", mappingFile));
+                        throw new FormatException(string.Format("{0} mapping file has the wrong format!", filePath));
                     }
                     else if (lineNumber > 1)
                     {
@@ -925,7 +1083,7 @@
 
                         if (mapping.Length != 4)
                         {
-                            throw new FormatException(string.Format("{0} mapping file has the wrong format!", mappingFile));
+                            throw new FormatException(string.Format("{0} mapping file has the wrong format!", filePath));
                         }
 
                         string currentChar = mapping[0];
@@ -957,7 +1115,7 @@
             if (needModify)
             {
                 string content = string.Format("{0}\t->\t{1}\t{2}", GlobalVar.Config.CharName, crfFileName, usingInfo);
-                Util.EditLineInFile(mappingFile, lineNumber, content, !charExist);
+                Util.EditLineInFile(filePath, lineNumber, content, !charExist);
             }
         }
 
@@ -976,7 +1134,7 @@
                 // Microsoft.Tts.Offline.dll, System.Speech.dll from Offline
                 // HostCommon.dll, TestEngine_UTest.dll test\TTS\bin\Avatar
                 string frontendMeasureDir = Path.GetDirectoryName(Util.FrontendMeasurePath);
-                string[] requiredDllPaths = 
+                string[] requiredDllPaths =
                 {
                     Path.Combine(GlobalVar.Config.OfflineToolPath, "Microsoft.Tts.Offline.dll"),
                     Path.Combine(GlobalVar.Config.OfflineToolPath, "System.Speech.dll"),
