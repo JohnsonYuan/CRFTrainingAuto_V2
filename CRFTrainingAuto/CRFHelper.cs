@@ -549,36 +549,26 @@
 
             Helper.ThrowIfDirectoryNotExist(trainingFolder);
 
-            string bugFixingFile = Path.Combine(trainingFolder, GlobalVar.BugFixingFileName);
+            string saveFilePath = Path.Combine(trainingFolder, GlobalVar.BugFixingFileName);
 
-            XmlScriptFile results = new XmlScriptFile(GlobalVar.Config.Lang);
             int startId = GlobalVar.BugFixingXmlStartIndex + 1;
+            
+            XmlDocument doc;
 
-            if (File.Exists(bugFixingFile))
+            if (File.Exists(saveFilePath))
             {
-                XmlDocument doc = new XmlDocument();
-                doc.Load(bugFixingFile);
+                doc = new XmlDocument();
+                doc.Load(saveFilePath);
                 XmlNodeList list = doc.DocumentElement.ChildNodes;
+
                 if (list != null && list.Count > 0)
                 {
-                    for (int i = 0; i < list.Count; i++)
-                    {
-                        string testCase = list[i].SelectSingleNode("text").InnerText;
-                        if (string.IsNullOrEmpty(testCase))
-                        {
-                            throw new Exception("Test case in line " + (i + 1) + " is empty!");
-                        }
-
-                        results.Items.Add(ScriptGenerator.GenerateScriptItem(testCase));
-
-                        if (i == list.Count - 1)
-                        {
-                            startId = Convert.ToInt32(list.Item(list.Count - 1).Attributes["id"].Value) + 1;
-                        }
-                    }
+                    startId = Convert.ToInt32(list.Item(list.Count - 1).Attributes["id"].Value) + 1;
                 }
             }
 
+
+            XmlScriptFile results = new XmlScriptFile(GlobalVar.Config.Lang);
             // append the cases
             var senAndProns = Util.GetSenAndPronFromBugFixingFile(bugFixingFilePath);
 
@@ -610,7 +600,22 @@
                 }
             }
 
-            results.Save(bugFixingFile, System.Text.Encoding.Unicode);
+            if (!File.Exists(saveFilePath))
+            {
+                results.Save(saveFilePath, System.Text.Encoding.Unicode);
+            }
+            else
+            {
+                // if there' already an bug fixing file, save the new items to a temp path, delete it when merge with existing file
+                string tempFile = Path.GetTempFileName();
+
+                results.Save(tempFile, System.Text.Encoding.Unicode);
+
+                XmlDocument doc;
+
+                File.Delete(tempFile);
+            }
+
 
             Console.WriteLine("Generate bug fixing file " + bugFixingFile);
 

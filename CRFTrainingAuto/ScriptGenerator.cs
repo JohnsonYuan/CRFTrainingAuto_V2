@@ -70,7 +70,7 @@
                             outputFilePath = Path.Combine(outputDir, outputFileName ?? GlobalVar.TrainingFileName);
 
                             // currently, the 3rd para is always null, if specified, output file's start index continue with existing script file
-                            GenTrainingScript(caseAndProns, outputFilePath, startIndex);
+                            GenTrainingScript(caseAndProns.ToDictionary(p => p.Key.Content, p => p.Value), outputFilePath, startIndex);
                             break;
                         default:
                             break;
@@ -218,7 +218,7 @@
         /// <param name="outputFilePath">output xml file path</param>
         /// <param name="existingScriptPath">existing script file path</param>
         /// <param name="startIndexOrFilePath">if it is number, then the start index plus 1, if it as an script file path, the start index will be the last item in the script plus 1</param>
-        public static void GenTrainingScript(Dictionary<SentenceAndWbResult, string> caseAndProns, string outputFilePath, string startIndexOrFilePath = "")
+        public static void GenTrainingScript(Dictionary<string, string> caseAndProns, string outputFilePath, string startIndexOrFilePath = "")
         {
             int startId = 1;
 
@@ -251,9 +251,9 @@
 
             XmlScriptFile result = new XmlScriptFile(GlobalVar.Config.Lang);
 
-            foreach (SentenceAndWbResult caseAndWb in caseAndProns.Keys)
+            foreach (var caseAndPron in caseAndProns)
             {
-                string testCase = caseAndWb.Content;
+                string testCase = caseAndPron.Key;
 
                 ScriptItem item = GenerateScriptItem(testCase);
 
@@ -261,7 +261,7 @@
 
                 if (charWord != null)
                 {
-                    charWord.Pronunciation = caseAndProns[caseAndWb];
+                    charWord.Pronunciation = caseAndPron.Value;
 
                     item.Id = string.Format("{0:D10}", startId);
 
@@ -285,7 +285,7 @@
 
             // genereate a txt file with same name for clear look
             File.WriteAllLines(Util.ChangeFileExtension(outputFilePath, GlobalVar.TxtFileExtension),
-                               caseAndProns.Keys.Select(r=>r.Content));
+                               caseAndProns.Keys);
 
             Console.WriteLine("Generate training script " + outputFilePath);
         }

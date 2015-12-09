@@ -459,7 +459,7 @@
                 Console.WriteLine("Generating test and training script to " + dirPath);
 
                 ScriptGenerator.GenRuntimeTestcase(testingcaseAndProns.ToDictionary(p => p.Key, p => p.Value), Path.Combine(dirPath, GlobalVar.TestCaseFileName));
-                ScriptGenerator.GenTrainingScript(trainingcaseAndProns.ToDictionary(p => p.Key, p => p.Value), Path.Combine(trainingFolder, GlobalVar.TrainingFileName));
+                ScriptGenerator.GenTrainingScript(trainingcaseAndProns.ToDictionary(p => p.Key.Content, p => p.Value), Path.Combine(trainingFolder, GlobalVar.TrainingFileName));
             }
 
             if (xlWorkBook != null)
