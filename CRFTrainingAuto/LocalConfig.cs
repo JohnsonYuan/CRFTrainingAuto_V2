@@ -17,7 +17,6 @@
         private static object _locker = new object();
 
         #endregion
-
         #region Fields
 
         // target\distrib\debug\{amd64/x86}\dev\TTS\Server\bin\Offline
@@ -465,7 +464,7 @@
                 _langDataPath = Path.Combine(_branchRootPath, string.Format(LangDataPathPattern, Localor.LanguageToString(_lang).Replace("-", "")));
                 Helper.ThrowIfFileNotExist(_langDataPath);
                 
-                _polyRuleFilePath = Path.Combine(_branchRootPath, string.Format(PolyRuleFilePathPattern, Localor.LanguageToString(_lang).Replace("-", "")));
+                _polyRuleFilePath = Path.Combine(_branchRootPath, string.Format(PolyRuleFilePathPattern, Localor.LanguageToString(_lang)));
                 Helper.ThrowIfFileNotExist(_polyRuleFilePath);
             }
 
@@ -518,7 +517,6 @@
             }
             #endregion
         }
-
         /// <summary>
         /// Init _instance when _instance is null, support multithread Singleton
         /// </summary>
@@ -556,7 +554,6 @@
                 return _instance;
             }
         }
-
         #endregion
     }
 }

@@ -19,24 +19,32 @@
         {
             Dictionary<SentenceAndWbResult, string> caseAndProns = new Dictionary<SentenceAndWbResult, string>();
 
+            WordBreaker breaker = null;
+
             for (int rCnt = 2; rCnt <= usedRange.Rows.Count; rCnt++)
             {
                 SentenceAndWbResult tempReseult = new SentenceAndWbResult();
 
                 // first column for case, second column for corrct pron
-                string caseVal = Convert.ToString((usedRange.Cells[rCnt, GlobalVar.ExcelCaseColIndex] as Excel.Range).Value2);
+                string caseVal = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelCaseColIndex] as Excel.Range).Value2);
                 tempReseult.Content = caseVal.Replace(" ", "").Replace("\t", "");
-                string wbResult = Convert.ToString((usedRange.Cells[rCnt, GlobalVar.ExcelWbColIndex] as Excel.Range).Value2);
+                string wbResult = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelWbColIndex] as Excel.Range).Value2);
+                
                 if (!string.IsNullOrEmpty(wbResult))
                 {
                     tempReseult.WbResult = wbResult.SplitBySpace();
                 }
                 else
                 {
-                    tempReseult.WbResult = GlobalVar.WordBreaker.BreakWords(caseVal);
+                    if(breaker == null)
+                    {
+                        breaker = new WordBreaker(LocalConfig.Instance);
+                    }
+
+                    tempReseult.WbResult = breaker.BreakWords(caseVal);
                 }
                 
-                string pinYinPron = Convert.ToString((usedRange.Cells[rCnt, GlobalVar.ExcelCorrectPronColIndex] as Excel.Range).Value2);
+                string pinYinPron = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelCorrectPronColIndex] as Excel.Range).Value2);
                 if (string.IsNullOrWhiteSpace(pinYinPron))
                 {
                     throw new Exception(string.Format("Excel in line {0} doesn't provide the pron.", rCnt));
@@ -53,8 +61,8 @@
                 if (!caseAndProns.ContainsKey(tempReseult))
                 {
                     // check the pron is in config file
-                    if ((GlobalVar.Config.Prons.ContainsKey(pinYinPron) &&
-                        !string.IsNullOrEmpty(GlobalVar.Config.Prons[pinYinPron])))
+                    if ((LocalConfig.Instance.Prons.ContainsKey(pinYinPron) &&
+                        !string.IsNullOrEmpty(LocalConfig.Instance.Prons[pinYinPron])))
                     {
                         // if don't use native phone, we add the pinyin pron to result
                         if (!useNavtivePhone)
@@ -63,13 +71,13 @@
                         }
                         else
                         {
-                            caseAndProns.Add(tempReseult, GlobalVar.Config.Prons[pinYinPron]);
+                            caseAndProns.Add(tempReseult, LocalConfig.Instance.Prons[pinYinPron]);
                         }
                     }
                     else
                     {
                         string errorMsg = string.Format("Excel file in row {0} has the wrong pron \"{1}\"! It should like ", rCnt, pinYinPron);
-                        foreach (string val in GlobalVar.Config.Prons.Keys)
+                        foreach (string val in LocalConfig.Instance.Prons.Keys)
                         {
                             errorMsg += val + " ";
                         }
@@ -78,6 +86,12 @@
                     }
                 }
             }
+
+            if(breaker != null)
+            {
+                breaker.Dispose();
+            }
+
             return caseAndProns;
         }
 
@@ -112,34 +126,34 @@
 
             try
             {
-                xlWorkSheet.Name = GlobalVar.Config.CharName;
-                xlWorkSheet.Cells[1, GlobalVar.ExcelCaseColIndex] = GlobalVar.ExcelCaseColTitle;
-                xlWorkSheet.Cells[1, GlobalVar.ExcelCorrectPronColIndex] = GlobalVar.ExcelCorrectPronColTitle;
-                xlWorkSheet.Cells[1, GlobalVar.ExcelCommentColIndex] = GlobalVar.ExcelCorrectPronColTitle;
-                xlWorkSheet.Cells[1, GlobalVar.ExcelWbColIndex] = GlobalVar.ExcelWbColTitle;
+                xlWorkSheet.Name = LocalConfig.Instance.CharName;
+                xlWorkSheet.Cells[1, Util.ExcelCaseColIndex] = Util.ExcelCaseColTitle;
+                xlWorkSheet.Cells[1, Util.ExcelCorrectPronColIndex] = Util.ExcelCorrectPronColTitle;
+                xlWorkSheet.Cells[1, Util.ExcelCommentColIndex] = Util.ExcelCorrectPronColTitle;
+                xlWorkSheet.Cells[1, Util.ExcelWbColIndex] = Util.ExcelWbColTitle;
 
 
                 int rowIndex = 2;
 
                 foreach (KeyValuePair<SentenceAndWbResult, string> item in caseAndProns)
                 {
-                    xlWorkSheet.Cells[rowIndex, GlobalVar.ExcelCaseColIndex] = item.Key.Content;
-                    xlWorkSheet.Cells[rowIndex, GlobalVar.ExcelCorrectPronColIndex] = item.Value;
+                    xlWorkSheet.Cells[rowIndex, Util.ExcelCaseColIndex] = item.Key.Content;
+                    xlWorkSheet.Cells[rowIndex, Util.ExcelCorrectPronColIndex] = item.Value;
 
                     Excel.Range xlRange = (Excel.Range)xlWorkSheet.Cells[rowIndex, 1];
-                    int startIndex = item.Key.Content.GetSingleCharIndexOfLine(GlobalVar.Config.CharName, item.Key.WbResult);
+                    int startIndex = item.Key.Content.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, item.Key.WbResult);
                     if (startIndex > -1)
                     {
                         xlRange.Characters[startIndex + 1, 1].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
                     }
 
-                    xlWorkSheet.Cells[rowIndex, GlobalVar.ExcelWbColIndex] = item.Key.WbResult.SpaceSeparate();
+                    xlWorkSheet.Cells[rowIndex, Util.ExcelWbColIndex] = item.Key.WbResult.SpaceSeparate();
 
                     ++rowIndex;
                 }
 
                 // hide the wb result column
-                Excel.Range range = (Excel.Range)xlWorkSheet.Columns[GlobalVar.ExcelWbColIndex, Type.Missing];
+                Excel.Range range = (Excel.Range)xlWorkSheet.Columns[Util.ExcelWbColIndex, Type.Missing];
                 range.EntireColumn.Hidden = true;
 
                 xlWorkSheet.Columns.AutoFit();
@@ -235,26 +249,26 @@
             Dictionary<SentenceAndWbResult, string> caseAndProns = GetCaseAndPronsFromExcel(xlWorkSheet.UsedRange, false);
 
             // generate training and test script
-            if (caseAndProns != null && caseAndProns.Count() > GlobalVar.Config.NCrossCaseCount)
+            if (caseAndProns != null && caseAndProns.Count() > LocalConfig.Instance.NCrossCaseCount)
             {
                 // generate excel for training, e.g. corpusCountFilePath = "corpus.1000.xls"
-                trainingExcelFilePath = Path.Combine(outputDir, string.Format(GlobalVar.CorpusExcelFileNamePattern, GlobalVar.Config.NCrossCaseCount));
-                var trainingCaseAndProns = caseAndProns.Where((input, index) => (index >= 0 && index < GlobalVar.Config.NCrossCaseCount));
+                trainingExcelFilePath = Path.Combine(outputDir, string.Format(Util.CorpusExcelFileNamePattern, LocalConfig.Instance.NCrossCaseCount));
+                var trainingCaseAndProns = caseAndProns.Where((input, index) => (index >= 0 && index < LocalConfig.Instance.NCrossCaseCount));
 
-                Util.ConsoleOutTextColor(string.Format("Split {0} case from {1}, saved to {2}.", GlobalVar.Config.NCrossCaseCount, excelFilePath, trainingExcelFilePath));
+                Util.ConsoleOutTextColor(string.Format("Split {0} case from {1}, saved to {2}.", LocalConfig.Instance.NCrossCaseCount, excelFilePath, trainingExcelFilePath));
                 GenExcelFromCaseAndProns(trainingCaseAndProns, trainingExcelFilePath);
 
                 // generate excel for test cases, e.g. corpusCountFilePath = "corpus.500.xls"
-                int testCount = GlobalVar.Config.MaxCaseCount - GlobalVar.Config.NCrossCaseCount;
-                testExcelFilePath = Path.Combine(outputDir, string.Format(GlobalVar.CorpusExcelFileNamePattern, testCount));
-                var testCaseAndProns = caseAndProns.Where((input, index) => (index >= GlobalVar.Config.NCrossCaseCount));
+                int testCount = LocalConfig.Instance.MaxCaseCount - LocalConfig.Instance.NCrossCaseCount;
+                testExcelFilePath = Path.Combine(outputDir, string.Format(Util.CorpusExcelFileNamePattern, testCount));
+                var testCaseAndProns = caseAndProns.Where((input, index) => (index >= LocalConfig.Instance.NCrossCaseCount));
 
                 Util.ConsoleOutTextColor(string.Format("Split {0} case from {1}, saved to {2}.", testCount, excelFilePath, testExcelFilePath));
                 GenExcelFromCaseAndProns(testCaseAndProns, testExcelFilePath);
             }
             else
             {
-                Util.ConsoleOutTextColor(string.Format("The excel file doesn't content min {0} cases for training.", GlobalVar.Config.NCrossCaseCount), ConsoleColor.Red);
+                Util.ConsoleOutTextColor(string.Format("The excel file doesn't content min {0} cases for training.", LocalConfig.Instance.NCrossCaseCount), ConsoleColor.Red);
             }
 
             if (xlWorkBook != null)
@@ -345,9 +359,11 @@
                 xlWorkBook = xlApp.Workbooks.Add(misValue);
                 xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
 
+                WordBreaker wordBreaker = new WordBreaker (LocalConfig.Instance);
+
                 try
                 {
-                    xlWorkSheet.Name = GlobalVar.Config.CharName;
+                    xlWorkSheet.Name = LocalConfig.Instance.CharName;
                     xlWorkSheet.Cells[1, 1] = "input";
                     xlWorkSheet.Cells[1, 2] = "expected";
                     xlWorkSheet.Cells[1, 3] = "result";
@@ -360,7 +376,8 @@
 
                         // highlight the target cahr
                         Excel.Range xlRange = (Excel.Range)xlWorkSheet.Cells[rowIndex, 1];
-                        int startIndex = inputLines[i].GetSingleCharIndexOfLine(GlobalVar.Config.CharName, GlobalVar.WordBreaker);
+                        int startIndex = inputLines[i].GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, wordBreaker);
+                        
                         if (startIndex > -1)
                         {
                             xlRange.Characters[startIndex + 1, 1].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
@@ -374,7 +391,7 @@
 
                     xlWorkSheet.Columns.AutoFit();
 
-                    string outputFilePath = Path.Combine(Path.GetDirectoryName(testResultFile), GlobalVar.VerifyResultExcelFileName);
+                    string outputFilePath = Path.Combine(Path.GetDirectoryName(testResultFile), Util.VerifyResultExcelFileName);
 
                     // delte the existing excel file
                     if (File.Exists(outputFilePath))
@@ -394,6 +411,8 @@
                 }
                 finally
                 {
+                    wordBreaker.Dispose();
+
                     xlWorkBook.Close(true, misValue, misValue);
                     xlApp.Quit();
 
@@ -436,7 +455,7 @@
             const int count = 100;
 
             // Generate 10 cross folder
-            for (int i = 0; i < GlobalVar.Config.NFolderCount; i++)
+            for (int i = 0; i < LocalConfig.Instance.NFolderCount; i++)
             {
                 var testingcaseAndProns = caseAndProns.Where((kvPair, index) =>
                     index >= i * count && index < (i + 1) * count);
@@ -444,7 +463,7 @@
                     (index >= 0 && index < i * count) || (index >= (i + 1) * count && index < 1000));
 
                 string dirPath = Path.Combine(outputDir, (i + 1).ToString());
-                string trainingFolder = Path.Combine(dirPath, GlobalVar.TrainingFolderName);
+                string trainingFolder = Path.Combine(dirPath, Util.TrainingFolderName);
 
                 if (!Directory.Exists(dirPath))
                 {
@@ -458,8 +477,8 @@
 
                 Console.WriteLine("Generating test and training script to " + dirPath);
 
-                ScriptGenerator.GenRuntimeTestcase(testingcaseAndProns.ToDictionary(p => p.Key, p => p.Value), Path.Combine(dirPath, GlobalVar.TestCaseFileName));
-                ScriptGenerator.GenTrainingScript(trainingcaseAndProns.ToDictionary(p => p.Key.Content, p => p.Value), Path.Combine(trainingFolder, GlobalVar.TrainingFileName));
+                ScriptGenerator.GenRuntimeTestcase(testingcaseAndProns.ToDictionary(p => p.Key, p => p.Value), Path.Combine(dirPath, Util.TestCaseFileName));
+                ScriptGenerator.GenTrainingScript(trainingcaseAndProns.ToDictionary(p => p.Key.Content, p => p.Value), Path.Combine(trainingFolder, Util.TrainingFileName));
             }
 
             if (xlWorkBook != null)
@@ -507,11 +526,11 @@
 
             try
             {
-                xlWorkSheet.Name = GlobalVar.Config.CharName;
-                xlWorkSheet.Cells[1, GlobalVar.ExcelCaseColIndex] = GlobalVar.ExcelCaseColTitle;
-                xlWorkSheet.Cells[1, GlobalVar.ExcelCorrectPronColIndex] = GlobalVar.ExcelCorrectPronColTitle;
-                xlWorkSheet.Cells[1, GlobalVar.ExcelCommentColIndex] = GlobalVar.ExcelCorrectPronColTitle;
-                xlWorkSheet.Cells[1, GlobalVar.ExcelWbColIndex] = GlobalVar.ExcelWbColTitle;
+                xlWorkSheet.Name = LocalConfig.Instance.CharName;
+                xlWorkSheet.Cells[1, Util.ExcelCaseColIndex] = Util.ExcelCaseColTitle;
+                xlWorkSheet.Cells[1, Util.ExcelCorrectPronColIndex] = Util.ExcelCorrectPronColTitle;
+                xlWorkSheet.Cells[1, Util.ExcelCommentColIndex] = Util.ExcelCorrectPronColTitle;
+                xlWorkSheet.Cells[1, Util.ExcelWbColIndex] = Util.ExcelWbColTitle;
 
                 var allCases = Util.GetSenAndWbFromCorpus(inFilePath, hasWbResult);
                 
@@ -521,14 +540,14 @@
                 // fill the sheet
                 for (int i = 0; i < allCases.Count; i++)
                 {
-                    xlWorkSheet.Cells[rowIndex, GlobalVar.ExcelCaseColIndex] = allCases[i].Content;
+                    xlWorkSheet.Cells[rowIndex, Util.ExcelCaseColIndex] = allCases[i].Content;
 
                     // highlight the training character
                     Excel.Range xlRange = (Excel.Range)xlWorkSheet.Cells[rowIndex, 1];
-                    int startIndex = allCases[i].Content.GetSingleCharIndexOfLine(GlobalVar.Config.CharName, allCases[i].WbResult);
-                    xlRange.Characters[startIndex + 1, GlobalVar.ExcelCaseColIndex].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
+                    int startIndex = allCases[i].Content.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, allCases[i].WbResult);
+                    xlRange.Characters[startIndex + 1, Util.ExcelCaseColIndex].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
 
-                    xlWorkSheet.Cells[rowIndex, GlobalVar.ExcelWbColIndex] = allCases[i].WbResult.SpaceSeparate();
+                    xlWorkSheet.Cells[rowIndex, Util.ExcelWbColIndex] = allCases[i].WbResult.SpaceSeparate();
 
                     ++rowIndex;
                 }
@@ -536,7 +555,7 @@
                 xlWorkSheet.Columns.AutoFit();
 
                 // hide the wb result column
-                Excel.Range range = (Excel.Range)xlWorkSheet.Columns[GlobalVar.ExcelWbColIndex, Type.Missing];
+                Excel.Range range = (Excel.Range)xlWorkSheet.Columns[Util.ExcelWbColIndex, Type.Missing];
                 range.EntireColumn.Hidden = true;
 
                 // delte the existing excel file

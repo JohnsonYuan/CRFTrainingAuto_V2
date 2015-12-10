@@ -60,14 +60,14 @@
                         case GenerateAction.TestCase:
                             Util.ConsoleOutTextColor("Generate test cases for " + excelFilePath);
                             // Generate FM Test Cases, if not supply file name, using TestCaseFileName as default name
-                            outputFilePath = Path.Combine(outputDir, outputFileName ?? GlobalVar.TestCaseFileName);
+                            outputFilePath = Path.Combine(outputDir, outputFileName ?? Util.TestCaseFileName);
 
                             GenRuntimeTestcase(caseAndProns, outputFilePath);
                             break;
                         case GenerateAction.TrainingScript:
                             // Generate training script, if not supply file name, using TrainingFileName as default name
                             Util.ConsoleOutTextColor("Generating training script for " + excelFilePath);
-                            outputFilePath = Path.Combine(outputDir, outputFileName ?? GlobalVar.TrainingFileName);
+                            outputFilePath = Path.Combine(outputDir, outputFileName ?? Util.TrainingFileName);
 
                             // currently, the 3rd para is always null, if specified, output file's start index continue with existing script file
                             GenTrainingScript(caseAndProns.ToDictionary(p => p.Key.Content, p => p.Value), outputFilePath, startIndex);
@@ -122,9 +122,9 @@
         ///   </case>
         /// </cases>
         /// </example>
-        /// <param name="caseAndProns">dictionary contains case and pron</param>
+        /// <param name="caseAndPronsWithWb">dictionary contains case and pron and word break result</param>
         /// <param name="outputFilePath">output xml file path</param>
-        public static void GenRuntimeTestcase(Dictionary<SentenceAndWbResult, string> caseAndProns, string outputFilePath)
+        public static void GenRuntimeTestcase(Dictionary<SentenceAndWbResult, string> caseAndPronsWithWb, string outputFilePath)
         {
             XmlWriterSettings settings = new XmlWriterSettings
             {
@@ -135,18 +135,18 @@
 
             using (XmlWriter xtw = XmlTextWriter.Create(outputFilePath, settings))
             {
-                xtw.WriteStartElement("cases", GlobalVar.TestXmlNamespace);
-                xtw.WriteAttributeString("lang", Localor.LanguageToString(GlobalVar.Config.Lang));
+                xtw.WriteStartElement("cases", Util.TestXmlNamespace);
+                xtw.WriteAttributeString("lang", Localor.LanguageToString(LocalConfig.Instance.Lang));
                 xtw.WriteAttributeString("component", "Pronunciation");
 
-                string charName = GlobalVar.Config.CharName;
+                string charName = LocalConfig.Instance.CharName;
 
-                foreach (SentenceAndWbResult caseAndWb in caseAndProns.Keys)
+                foreach (SentenceAndWbResult caseAndWb in caseAndPronsWithWb.Keys)
                 {
                     xtw.WriteStartElement("case");
                     xtw.WriteAttributeString("priority", "P1");
                     xtw.WriteAttributeString("category", "polyphone");
-                    xtw.WriteAttributeString("pron_polyword", GlobalVar.Config.CharName);
+                    xtw.WriteAttributeString("pron_polyword", LocalConfig.Instance.CharName);
 
                     string testCase = caseAndWb.Content;
                     // the content might have more than one target char
@@ -179,7 +179,7 @@
                     xtw.WriteEndElement();
 
                     xtw.WriteStartElement("output");
-                    xtw.WriteElementString("part", caseAndProns[caseAndWb]);
+                    xtw.WriteElementString("part", caseAndPronsWithWb[caseAndWb]);
                     xtw.WriteEndElement();
 
                     xtw.WriteEndElement();
@@ -189,9 +189,36 @@
             }
 
             // genereate a txt file with same name for clear look
-            File.WriteAllLines(Util.ChangeFileExtension(outputFilePath, GlobalVar.TxtFileExtension), caseAndProns.Keys.Select(s => s.Content));
+            File.WriteAllLines(Util.ChangeFileExtension(outputFilePath, Util.TxtFileExtension), caseAndPronsWithWb.Keys.Select(s => s.Content));
 
             Console.WriteLine("Generate test case " + outputFilePath);
+        }
+
+        /// <summary>
+        /// Generate test case file
+        /// </summary>
+        /// <param name="caseAndProns">dictionary contains case and pron</param>
+        /// <param name="outputFilePath">output xml file path</param>
+        public static void GenRuntimeTestcase(Dictionary<string, string> caseAndProns, string outputFilePath)
+        {
+            Dictionary<SentenceAndWbResult, string> caseAndPronsWithWb = new Dictionary<SentenceAndWbResult, string>();
+
+            SentenceAndWbResult tempResult;
+
+            using (WordBreaker wordBreaker = new WordBreaker(LocalConfig.Instance))
+            {
+                foreach (var item in caseAndProns)
+                {
+                    tempResult = new SentenceAndWbResult {
+                        Content = item.Key,
+                        WbResult = wordBreaker.BreakWords(item.Key)
+                    };
+
+                    caseAndPronsWithWb.Add(tempResult, item.Value);
+                }
+            }
+
+            GenRuntimeTestcase(caseAndPronsWithWb, outputFilePath);
         }
 
         /// <summary>
@@ -249,7 +276,7 @@
                 }
             }
 
-            XmlScriptFile result = new XmlScriptFile(GlobalVar.Config.Lang);
+            XmlScriptFile result = new XmlScriptFile(LocalConfig.Instance.Lang);
 
             foreach (var caseAndPron in caseAndProns)
             {
@@ -257,7 +284,7 @@
 
                 ScriptItem item = GenerateScriptItem(testCase);
 
-                ScriptWord charWord = item.AllWords.FirstOrDefault(p => p.Grapheme.Equals(GlobalVar.Config.CharName, StringComparison.InvariantCultureIgnoreCase));
+                ScriptWord charWord = item.AllWords.FirstOrDefault(p => p.Grapheme.Equals(LocalConfig.Instance.CharName, StringComparison.InvariantCultureIgnoreCase));
 
                 if (charWord != null)
                 {
@@ -271,7 +298,7 @@
                         // force to provide pronunciation when training, it's necessary for training crf model
                         if (string.IsNullOrEmpty(word.Pronunciation))
                         {
-                            word.Pronunciation = GlobalVar.Config.DefaultWordPron;
+                            word.Pronunciation = LocalConfig.Instance.DefaultWordPron;
                             word.WordType = WordType.Normal;
                         }
                     }
@@ -284,7 +311,7 @@
             result.Save(outputFilePath, System.Text.Encoding.Unicode);
 
             // genereate a txt file with same name for clear look
-            File.WriteAllLines(Util.ChangeFileExtension(outputFilePath, GlobalVar.TxtFileExtension),
+            File.WriteAllLines(Util.ChangeFileExtension(outputFilePath, Util.TxtFileExtension),
                                caseAndProns.Keys);
 
             Console.WriteLine("Generate training script " + outputFilePath);
@@ -306,36 +333,39 @@
             ScriptItem item = new ScriptItem();
             item.Text = text;
 
-            foreach (SP.TtsUtterance utt in GlobalVar.WordBreaker.EspUtterances(text))
+            using (WordBreaker wordBreaker = new WordBreaker(LocalConfig.Instance))
             {
-                using (utt)
+                foreach (SP.TtsUtterance utt in wordBreaker.EspUtterances(text))
                 {
-                    if (utt.Words.Count == 0)
+                    using (utt)
                     {
-                        continue;
-                    }
-
-                    ScriptSentence sentence = new ScriptSentence();
-                    foreach (SP.TtsWord word in utt.Words)
-                    {
-                        if (!string.IsNullOrEmpty(word.WordText))
+                        if (utt.Words.Count == 0)
                         {
-                            ScriptWord scriptWord = new ScriptWord();
-                            scriptWord.Grapheme = word.WordText;
-
-                            if (!string.IsNullOrEmpty(word.Pronunciation))
-                            {
-                                scriptWord.Pronunciation = word.Pronunciation.ToLowerInvariant();
-                            }
-
-                            scriptWord.WordType = WordType.Normal;
-
-                            sentence.Words.Add(scriptWord);
+                            continue;
                         }
-                    }
 
-                    sentence.Text = sentence.BuildTextFromWords();
-                    item.Sentences.Add(sentence);
+                        ScriptSentence sentence = new ScriptSentence();
+                        foreach (SP.TtsWord word in utt.Words)
+                        {
+                            if (!string.IsNullOrEmpty(word.WordText))
+                            {
+                                ScriptWord scriptWord = new ScriptWord();
+                                scriptWord.Grapheme = word.WordText;
+
+                                if (!string.IsNullOrEmpty(word.Pronunciation))
+                                {
+                                    scriptWord.Pronunciation = word.Pronunciation.ToLowerInvariant();
+                                }
+
+                                scriptWord.WordType = WordType.Normal;
+
+                                sentence.Words.Add(scriptWord);
+                            }
+                        }
+
+                        sentence.Text = sentence.BuildTextFromWords();
+                        item.Sentences.Add(sentence);
+                    }
                 }
             }
 

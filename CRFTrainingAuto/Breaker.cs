@@ -25,6 +25,14 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="WordBreaker"/> class.
         /// </summary>
+        /// <param name="config">local config</param>
+        public WordBreaker(LocalConfig config) : this(config.Lang, config.LangDataPath)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="WordBreaker"/> class.
+        /// </summary>
         /// <param name="language">Language.</param>
         /// <param name="langDataPath">language data path</param>
         public WordBreaker(Language lang, string langDataPath)
@@ -157,16 +165,6 @@
                 }
             }
             return words.ToArray();
-        }
-
-        /// <summary>
-        /// Generate word breaker using local config
-        /// </summary>
-        /// <param name="config">local config</param>
-        /// <returns>wrod breaker</returns>
-        public static WordBreaker GenWordBreaker(LocalConfig config)
-        {
-            return new WordBreaker(config.Lang, config.LangDataPath);
         }
 
         #endregion

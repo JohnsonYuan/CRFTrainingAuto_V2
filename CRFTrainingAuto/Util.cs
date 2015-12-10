@@ -8,6 +8,59 @@
 
     public static class Util
     {
+        #region internal Fields
+
+        // Excel first column for case, second column for corrct pron
+        internal const int ExcelCaseColIndex = 1;
+        internal const string ExcelCaseColTitle = "case";
+        internal const int ExcelCorrectPronColIndex = 2;
+        internal const string ExcelCorrectPronColTitle = "correct pron";
+        internal const int ExcelCommentColIndex = 3;
+        internal const string ExcelCommentColTitle = "comment";
+        internal const int ExcelWbColIndex = 4;
+        internal const string ExcelWbColTitle = "wb result";
+
+        // Use 1000 for N cross folder test
+        // Temp folder store filtered corpus data
+        internal const string TempFolderName = "temp";
+        internal const string ExcelFileExtension = ".xls";
+        internal const string TxtFileExtension = ".txt";
+
+        internal const string CRFFileSearchExtension = "*.crf";
+        internal const string CorpusTxtFileSearchPattern = "*.txt";
+        internal const string XmlFileSearchExtension = "*.xml";
+        internal const string CorpusTxtFileNamePattern = "corpus.{0}.txt";
+        internal const string CorpusTxtAllFileName = "corpus.all.txt";
+        internal const string CorpusExcelFileNamePattern = "corpus.{0}.xls";
+
+        internal const string TrainingFolderName = "trainingScript";
+        internal const string NCrossFolderName = "NCross";
+        internal const string VerifyResultFolderName = "VerifyResult";
+        internal const string FinalResultFolderName = "FinalResult";
+
+        internal const string TrainingExcelFileName = "training.xls";
+        internal const string TestingExcelFileName = "testing.xls";
+        internal const string VerifyResultExcelFileName = "verifyResult.xls";
+
+        internal const string TrainingConfigFileName = "training.config";
+        internal const string TrainingConfigNamespace = "http://schemas.microsoft.com/tts/toolsuite";
+        internal const string FeatureConfigFileName = "features.config";
+
+        internal const int BugFixingXmlStartIndex = 1000000000;
+        internal const string BugFixingFileName = "bugfixing.xml";
+        internal const string BugFixingTestFileName = "bugfixingTest.xml";
+        internal const string BugFixingTestLogFileName = "bugfixingTestlog.txt";
+        internal const string ScriptFileName = "script.xml";
+        internal const string TrainingFileName = "training.xml";
+        internal const string TestFileName = "testing.xml";
+        internal const string TestXmlNamespace = "http://schemas.microsoft.com/tts";
+        internal const string TestCaseFileName = "Pron_Polyphony.xml";
+        internal const string TestlogFileName = "testlog.txt";
+        internal const string TestlogBeforeFileName = "testlog.before.txt";
+        internal const string TestReportFileName = "NCrossTestReport.txt";
+
+        #endregion
+
         #region Properties
 
         /// <summary>
@@ -17,7 +70,7 @@
         {
             get
             {
-                string toolPath = Path.Combine(GlobalVar.Config.OfflineToolPath, "ProsodyModelTrainer.exe");
+                string toolPath = Path.Combine(LocalConfig.Instance.OfflineToolPath, "ProsodyModelTrainer.exe");
 
                 return toolPath;
             }
@@ -31,13 +84,15 @@
             get
             {
                 // use the test version of FrontendMeasure.exe
-                string toolPath = Path.Combine(GlobalVar.Config.BranchRootPath, @"target\distrib\debug\amd64\test\TTS\bin", "FrontendMeasure.exe");
+                string toolPath = Path.Combine(LocalConfig.Instance.BranchRootPath, @"target\distrib\debug\amd64\test\TTS\bin", "FrontendMeasure.exe");
 
                 return toolPath;
             }
         }
 
         #endregion
+
+        #region public methods
 
         /// <summary>
         /// Merge all files to a single file
@@ -336,7 +391,6 @@
                 Path.GetFileNameWithoutExtension(filePath) + newExtension);
         }
 
-
         /// <summary>
         /// Get case and wb result from corpus file
         /// </summary>
@@ -348,6 +402,8 @@
             Helper.ThrowIfFileNotExist(inputFilePath);
 
             List<SentenceAndWbResult> results = new List<SentenceAndWbResult>();
+
+            WordBreaker wordBreaker = null;
 
             using (StreamReader reader = new StreamReader(inputFilePath))
             {
@@ -375,7 +431,9 @@
                     }
                     else
                     {
-                        var wbResult = GlobalVar.WordBreaker.BreakWords(caseLine);
+                        wordBreaker = new WordBreaker(LocalConfig.Instance);
+                        var wbResult = wordBreaker.BreakWords(caseLine);
+
                         results.Add(new SentenceAndWbResult
                         {
                             Content = wbResult.ConcatToString(),
@@ -383,6 +441,11 @@
                         });
                     }
                 }
+            }
+
+            if (wordBreaker != null)
+            {
+                wordBreaker.Dispose();
             }
 
             return results;
@@ -398,31 +461,36 @@
         /// </param>
         /// <param name="hasWbResult"></param>
         /// <returns></returns>
-        public static IDictionary<string, string> GetSenAndPronFromBugFixingFile(string inputFilePath)
+        public static Dictionary<string, string> GetSenAndPronFromBugFixingFile(string inputFilePath)
         {
-            IDictionary < string, string> senAndProns = new Dictionary<string, string>();
+            Dictionary<string, string> senAndProns = new Dictionary<string, string>();
+
+            WordBreaker wordBreaker = new WordBreaker(LocalConfig.Instance);
 
             using (StreamReader reader = new StreamReader(inputFilePath))
             {
                 int lineNumber = 1;
+
                 while (reader.Peek() > -1)
                 {
                     string line = reader.ReadLine();
-                    if(!string.IsNullOrEmpty(line))
+                    if (!string.IsNullOrEmpty(line))
                     {
                         string[] caseAndPron = line.Trim().Split(new char[] { '\t' });
+
                         if (caseAndPron.Length != 2)
                         {
                             throw new Exception(string.Format("{0} file at line {1} has the wrong format!", inputFilePath, lineNumber));
                         }
 
                         string sentence = caseAndPron[0];
-                        if(string.IsNullOrEmpty(sentence))
+
+                        if (string.IsNullOrEmpty(sentence))
                         {
                             throw new Exception(string.Format("{0} file at line {1} has the empty sentence!", inputFilePath, lineNumber));
                         }
 
-                        if (sentence.GetSingleCharIndexOfLine(GlobalVar.Config.CharName, GlobalVar.WordBreaker) == -1)
+                        if (sentence.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, wordBreaker) == -1)
                         {
                             throw new Exception(string.Format("{0} file at line {1} has the wrong sentence!", inputFilePath, lineNumber));
                         }
@@ -431,10 +499,10 @@
 
                         string pinYinPron = caseAndPron[1];
 
-                        if ((GlobalVar.Config.Prons.ContainsKey(pinYinPron) &&
-                            !string.IsNullOrEmpty(GlobalVar.Config.Prons[pinYinPron])))
+                        if ((LocalConfig.Instance.Prons.ContainsKey(pinYinPron) &&
+                            !string.IsNullOrEmpty(LocalConfig.Instance.Prons[pinYinPron])))
                         {
-                            senAndProns.Add(sentence, pinYinPron);
+                            senAndProns.Add(sentence, LocalConfig.Instance.Prons[pinYinPron]);
                         }
                         else
                         {
@@ -445,7 +513,11 @@
                 }
             }
 
+            wordBreaker.Dispose();
+
             return senAndProns;
         }
+
+        #endregion
     }
 }

@@ -51,8 +51,8 @@
                 throw new Exception(inputDir + " not exists!");
             }
 
-            string[] inFilePaths = Directory.GetFiles(inputDir, GlobalVar.CorpusTxtFileSearchPattern);
-            string tempFolder = Path.Combine(outputDir, GlobalVar.TempFolderName);
+            string[] inFilePaths = Directory.GetFiles(inputDir, Util.CorpusTxtFileSearchPattern);
+            string tempFolder = Path.Combine(outputDir, Util.TempFolderName);
 
             if (!Directory.Exists(outputDir))
             {
@@ -65,20 +65,20 @@
             }
 
             Task[] tasks;
-            if (inFilePaths.Length <= GlobalVar.Config.MaxThreadCount)
+            if (inFilePaths.Length <= LocalConfig.Instance.MaxThreadCount)
             {
                 tasks = new Task[inFilePaths.Length];
             }
             else
             {
-                tasks = new Task[GlobalVar.Config.MaxThreadCount];
+                tasks = new Task[LocalConfig.Instance.MaxThreadCount];
             }
 
             Util.ConsoleOutTextColor("Start filtering");
 
             for (int i = 0; i < tasks.Length; i++)
             {
-                string[] filesToProcess = inFilePaths.Where((input, index) => (index % GlobalVar.Config.MaxThreadCount == i)).ToArray();
+                string[] filesToProcess = inFilePaths.Where((input, index) => (index % LocalConfig.Instance.MaxThreadCount == i)).ToArray();
 
                 // start each task nad show process info when this task complete
                 tasks[i] = Task.Factory.StartNew(() =>
@@ -118,9 +118,10 @@
             }
 
             WordBreaker wordBreaker = null;
+
             if (!useWbResult)
             {
-                wordBreaker = WordBreaker.GenWordBreaker(GlobalVar.Config);
+                wordBreaker = new WordBreaker(LocalConfig.Instance);
             }
 
             foreach (string filePath in fileProcessed)
@@ -175,7 +176,7 @@
 
                         // check the case's length
                         if (string.IsNullOrEmpty(sentence) ||
-                            sentence.Length < GlobalVar.Config.MinCaseLength)
+                            sentence.Length < LocalConfig.Instance.MinCaseLength)
                         {
                             continue;
                         }
@@ -188,7 +189,7 @@
                             wbResult = wbReader.ReadLine().SplitBySpace();
 
                             if (!results.Contains(sentence) &&
-                                   sentence.GetSingleCharIndexOfLine(GlobalVar.Config.CharName, wbResult) > -1)
+                                   sentence.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, wbResult) > -1)
                             {
                                 isSentenceMatch = true;
                             }
@@ -197,11 +198,11 @@
                         {
                             if (wordBreaker == null)
                             {
-                                wordBreaker = WordBreaker.GenWordBreaker(GlobalVar.Config);
+                                wordBreaker = new WordBreaker(LocalConfig.Instance);
                             }
 
                             if (!results.Contains(sentence) &&
-                                sentence.GetSingleCharIndexOfLine(GlobalVar.Config.CharName, wordBreaker, out wbResult) > -1)
+                                sentence.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, wordBreaker, out wbResult) > -1)
                             {
                                 isSentenceMatch = true;
                             }
@@ -216,9 +217,9 @@
                             ++foundCount;
                             // show searching progress, i is start with 0, so ShowTipCount should minus 1
                             // if ShowTipCount = 5000, when i = 4999, 5000 cases searched
-                            if (GlobalVar.Config.ShowTipCount > 0 &&
-                                foundCount >= GlobalVar.Config.ShowTipCount &&
-                                foundCount % GlobalVar.Config.ShowTipCount == 0)
+                            if (LocalConfig.Instance.ShowTipCount > 0 &&
+                                foundCount >= LocalConfig.Instance.ShowTipCount &&
+                                foundCount % LocalConfig.Instance.ShowTipCount == 0)
                             {
                                 Console.WriteLine(string.Format("Search {0} in {1}", foundCount, fileName));
                             }
@@ -247,6 +248,11 @@
                     {
                         wbReader.Dispose();
                     }
+
+                    if(wordBreaker != null)
+                    {
+                        wordBreaker.Dispose();
+                    }
                 }
             }
         }
@@ -262,7 +268,7 @@
             var inputs = Util.GetSenAndWbFromCorpus(inFilePath);
 
             // check whether can random select
-            if (inputs.Count < GlobalVar.Config.MaxCaseCount)
+            if (inputs.Count < LocalConfig.Instance.MaxCaseCount)
             {
                 return null;
             }
@@ -270,8 +276,8 @@
             HashSet<string> results = new HashSet<string>();
             Random rand = new Random();
 
-            // results should contains GlobalVar.Config.MaxCaseCount * 2 lines
-            while (results.Count < GlobalVar.Config.MaxCaseCount * 2)
+            // results should contains LocalConfig.Instance.MaxCaseCount * 2 lines
+            while (results.Count < LocalConfig.Instance.MaxCaseCount * 2)
             {
                 int index = rand.Next(0, inputs.Count);
 
@@ -288,11 +294,11 @@
             }
 
             // save to txt file, it's easyier to view cases
-            string randomTxtFilePath = Path.Combine(outputDir, string.Format(GlobalVar.CorpusTxtFileNamePattern, GlobalVar.Config.MaxCaseCount));
+            string randomTxtFilePath = Path.Combine(outputDir, string.Format(Util.CorpusTxtFileNamePattern, LocalConfig.Instance.MaxCaseCount));
             File.WriteAllLines(randomTxtFilePath, results);
 
             // generate the excel file
-            string outputExcelFilePath = Path.Combine(outputDir, string.Format(GlobalVar.CorpusExcelFileNamePattern, GlobalVar.Config.MaxCaseCount));
+            string outputExcelFilePath = Path.Combine(outputDir, string.Format(Util.CorpusExcelFileNamePattern, LocalConfig.Instance.MaxCaseCount));
             try
             {
                 ExcelHelper.GenExcelFromTxtFile(randomTxtFilePath, outputExcelFilePath);
@@ -326,45 +332,45 @@
 
             #region put the 1000 training, and 500 test case to FinalResultFolder
 
-            string finalFolder = Path.Combine(outputDir, GlobalVar.FinalResultFolderName);
+            string finalFolder = Path.Combine(outputDir, Util.FinalResultFolderName);
             if (!Directory.Exists(finalFolder))
             {
                 Directory.CreateDirectory(finalFolder);
             }
 
-            string finalTrainingFolder = Path.Combine(finalFolder, GlobalVar.TrainingFolderName);
+            string finalTrainingFolder = Path.Combine(finalFolder, Util.TrainingFolderName);
             if (!Directory.Exists(finalTrainingFolder))
             {
                 Directory.CreateDirectory(finalTrainingFolder);
             }
 
             // generate scirpt.xml, script.xml = training.xml + testing.xml
-            ScriptGenerator.GenScript(excelFile, GenerateAction.TrainingScript, finalFolder, GlobalVar.ScriptFileName);
+            ScriptGenerator.GenScript(excelFile, GenerateAction.TrainingScript, finalFolder, Util.ScriptFileName);
             // generate training.xml
-            ScriptGenerator.GenScript(trainingExcelFilePath, GenerateAction.TrainingScript, finalTrainingFolder, GlobalVar.TrainingFileName);
+            ScriptGenerator.GenScript(trainingExcelFilePath, GenerateAction.TrainingScript, finalTrainingFolder, Util.TrainingFileName);
             // generate testing.xml
-            ScriptGenerator.GenScript(testExcelFilePath, GenerateAction.TrainingScript, finalFolder, GlobalVar.TestFileName);
+            ScriptGenerator.GenScript(testExcelFilePath, GenerateAction.TrainingScript, finalFolder, Util.TestFileName);
 
             // generate test cases to Pron_Polyphony.xml, used to put it to testcase folder
-            ScriptGenerator.GenScript(testExcelFilePath, GenerateAction.TestCase, finalFolder, GlobalVar.TestCaseFileName);
+            ScriptGenerator.GenScript(testExcelFilePath, GenerateAction.TestCase, finalFolder, Util.TestCaseFileName);
 
             // comple and run test
             CompileAndTestInFolder(finalFolder);
             #endregion
 
             // save the n cross test data to NCrossFolder
-            string nCrossFolder = Path.Combine(outputDir, GlobalVar.NCrossFolderName);
+            string nCrossFolder = Path.Combine(outputDir, Util.NCrossFolderName);
             // divide training excel file corpus to 10 separate testing and training part
             Util.ConsoleOutTextColor("Start N Cross excel " + trainingExcelFilePath);
             ExcelHelper.GenNCrossExcel(trainingExcelFilePath, nCrossFolder);
             Util.ConsoleOutTextColor("End N Cross excel " + trainingExcelFilePath);
 
-            string[] testlogPaths = new string[GlobalVar.Config.NFolderCount];
+            string[] testlogPaths = new string[LocalConfig.Instance.NFolderCount];
 
-            for (int i = 1; i <= GlobalVar.Config.NFolderCount; i++)
+            for (int i = 1; i <= LocalConfig.Instance.NFolderCount; i++)
             {
                 string destDir = Path.Combine(nCrossFolder, i.ToString());
-                testlogPaths[i - 1] = Path.Combine(destDir, GlobalVar.TestlogFileName);
+                testlogPaths[i - 1] = Path.Combine(destDir, Util.TestlogFileName);
 
                 // compile and run test in each folder
                 try
@@ -379,7 +385,7 @@
             }
 
             // generate report based NCross test log
-            string testReportPath = Path.Combine(outputDir, GlobalVar.TestReportFileName);
+            string testReportPath = Path.Combine(outputDir, Util.TestReportFileName);
             GenNCrossTestReport(testlogPaths, testReportPath);
             Util.ConsoleOutTextColor("Generate test report " + testReportPath);
         }
@@ -392,7 +398,7 @@
         public void GenVerifyResult(string excelFile, string outputDir)
         {
             // put the result to VerifyResultFolder
-            string verifyResultFolder = Path.Combine(outputDir, GlobalVar.VerifyResultFolderName);
+            string verifyResultFolder = Path.Combine(outputDir, Util.VerifyResultFolderName);
 
             // Verify the excel file's pron by compile and test all cases in excel
             if (!Directory.Exists(verifyResultFolder))
@@ -401,7 +407,7 @@
             }
 
             // bacause training script should put in one folder, so we put it in TrainingFolder
-            string trainingFolder = Path.Combine(verifyResultFolder, GlobalVar.TrainingFolderName);
+            string trainingFolder = Path.Combine(verifyResultFolder, Util.TrainingFolderName);
 
             if (!Directory.Exists(trainingFolder))
             {
@@ -410,8 +416,8 @@
 
             Util.ConsoleOutTextColor(string.Format("Start verify excel {0}, result will be saved to {1}.", excelFile, verifyResultFolder));
 
-            ScriptGenerator.GenScript(excelFile, GenerateAction.TrainingScript, trainingFolder, GlobalVar.TrainingFileName);
-            ScriptGenerator.GenScript(excelFile, GenerateAction.TestCase, verifyResultFolder, GlobalVar.TestCaseFileName);
+            ScriptGenerator.GenScript(excelFile, GenerateAction.TrainingScript, trainingFolder, Util.TrainingFileName);
+            ScriptGenerator.GenScript(excelFile, GenerateAction.TestCase, verifyResultFolder, Util.TestCaseFileName);
             CompileAndTestInFolder(verifyResultFolder, true);
         }
 
@@ -425,9 +431,9 @@
             Util.ConsoleOutTextColor("Start merge files in " + inputDir + " !");
 
             // e.g. corpusAllFilePath = "corpus.all.txt"
-            string corpusAllFilePath = Path.Combine(outputDir, GlobalVar.CorpusTxtAllFileName);
+            string corpusAllFilePath = Path.Combine(outputDir, Util.CorpusTxtAllFileName);
             // merge all files in temp folder
-            int mergedFileCount = Util.MergeFiles(Path.Combine(inputDir, GlobalVar.CorpusTxtFileSearchPattern), corpusAllFilePath);
+            int mergedFileCount = Util.MergeFiles(Path.Combine(inputDir, Util.CorpusTxtFileSearchPattern), corpusAllFilePath);
 
             if (mergedFileCount == 0)
             {
@@ -437,16 +443,16 @@
 
             Util.ConsoleOutTextColor(string.Format("All cases saved to {0}.", corpusAllFilePath));
 
-            Util.ConsoleOutTextColor(string.Format("Start random select {0} cases from {1}", GlobalVar.Config.MaxCaseCount, corpusAllFilePath));
+            Util.ConsoleOutTextColor(string.Format("Start random select {0} cases from {1}", LocalConfig.Instance.MaxCaseCount, corpusAllFilePath));
 
             string outputExcelFilePath = SelectRandomCorpus(corpusAllFilePath, outputDir);
             if (!string.IsNullOrEmpty(outputExcelFilePath))
             {
-                Util.ConsoleOutTextColor(string.Format("Random select {0} cases, saved to {1}", GlobalVar.Config.MaxCaseCount, outputExcelFilePath));
+                Util.ConsoleOutTextColor(string.Format("Random select {0} cases, saved to {1}", LocalConfig.Instance.MaxCaseCount, outputExcelFilePath));
             }
             else
             {
-                Util.ConsoleOutTextColor(string.Format("{0} doesn't contains {1}  data, can't generate random data.", corpusAllFilePath, GlobalVar.Config.MaxCaseCount));
+                Util.ConsoleOutTextColor(string.Format("{0} doesn't contains {1}  data, can't generate random data.", corpusAllFilePath, LocalConfig.Instance.MaxCaseCount));
             }
         }
 
@@ -461,9 +467,9 @@
             GenCRFTrainingConfig(destDir);
 
             // Check if the training file exist
-            string trainingFolder = Path.Combine(destDir, GlobalVar.TrainingFolderName);
+            string trainingFolder = Path.Combine(destDir, Util.TrainingFolderName);
             if (!Directory.Exists(trainingFolder)
-                || Directory.GetFiles(trainingFolder, GlobalVar.XmlFileSearchExtension).Count() <= 0)
+                || Directory.GetFiles(trainingFolder, Util.XmlFileSearchExtension).Count() <= 0)
             {
                 Util.ConsoleOutTextColor(string.Format("{0} doesn't exist or doesn't contains training scripts.", trainingFolder), ConsoleColor.Red);
                 return;
@@ -472,7 +478,7 @@
             Util.ConsoleOutTextColor("Training crf model in " + destDir);
             string message = "";
 
-            if (TrainingCRFModel(Path.Combine(destDir, GlobalVar.TrainingConfigFileName),
+            if (TrainingCRFModel(Path.Combine(destDir, Util.TrainingConfigFileName),
                 Path.Combine(destDir, "traininglog", "log.xml"),
                 ref message))
             {
@@ -484,11 +490,11 @@
             }
 
             Util.ConsoleOutTextColor("Compiling language data " + destDir);
-            string generatedCrf = Path.Combine(destDir, GlobalVar.Config.OutputCRFName);
+            string generatedCrf = Path.Combine(destDir, LocalConfig.Instance.OutputCRFName);
 
             string generatedDataFile;
             // compile lang  data file
-            if (CompileLangData(generatedCrf, GlobalVar.Config.CRFModelDir, destDir, out generatedDataFile))
+            if (CompileLangData(generatedCrf, LocalConfig.Instance.CRFModelDir, destDir, out generatedDataFile))
             {
                 Util.ConsoleOutTextColor("Successful compile " + generatedDataFile);
             }
@@ -498,12 +504,12 @@
                 return;
             }
 
-            string testcaseFile = Path.Combine(destDir, GlobalVar.TestCaseFileName);
+            string testcaseFile = Path.Combine(destDir, Util.TestCaseFileName);
             if (File.Exists(testcaseFile))
             {
                 Util.ConsoleOutTextColor("Running test " + testcaseFile);
 
-                string testLogFile = Path.Combine(destDir, GlobalVar.TestlogFileName);
+                string testLogFile = Path.Combine(destDir, Util.TestlogFileName);
                 if (TestCRFModel(generatedDataFile,
                     testcaseFile,
                     testLogFile,
@@ -511,18 +517,18 @@
                 {
                     Util.ConsoleOutTextColor(message);
 
+                    // test with the original dat file
+                    if (TestCRFModel(LocalConfig.Instance.LangDataPath,
+                        testcaseFile,
+                        Path.Combine(destDir, Util.TestlogBeforeFileName),
+                        ref message))
+                    {
+                        Util.ConsoleOutTextColor(message);
+                    }
+
                     // genereate excel report
                     if (genExcelReport)
                     {
-                        // test with the original dat file
-                        if (TestCRFModel(GlobalVar.Config.LangDataPath,
-                            testcaseFile,
-                            Path.Combine(destDir, GlobalVar.TestlogBeforeFileName),
-                            ref message))
-                        {
-                            Util.ConsoleOutTextColor(message);
-                        }
-
                         Util.ConsoleOutTextColor("Genereating excel test result");
                         ExcelHelper.GenExcelTestReport(testLogFile);
                     }
@@ -540,35 +546,35 @@
         /// </summary>
         /// <param name="bugFixingFilePath">bug fixing file (tab separate each line)
         /// 我还差你五元钱。	cha4
-        /// 我们离父母的希望还差很远。cha4
+        /// 我们离父母的希望还差很远。	cha4
         /// </param>
-        /// <param name="outputDir">folder contains training.config, training folder must exist under outputDir</param>
+        /// <param name="outputDir">Parent folder that contains TrainingScript folder</param>
         public void AppendTrainingScriptAndReRunTest(string bugFixingFilePath, string outputDir)
         {
-            string trainingFolder = Path.Combine(outputDir, GlobalVar.TrainingFolderName);
+            string trainingFolder = Path.Combine(outputDir, Util.TrainingFolderName);
 
             Helper.ThrowIfDirectoryNotExist(trainingFolder);
 
-            string saveFilePath = Path.Combine(trainingFolder, GlobalVar.BugFixingFileName);
+            string saveFilePath = Path.Combine(trainingFolder, Util.BugFixingFileName);
 
-            int startId = GlobalVar.BugFixingXmlStartIndex + 1;
-            
-            XmlDocument doc;
+            int startId = Util.BugFixingXmlStartIndex + 1;
+
+            XmlDocument existingXmlDoc = null;
 
             if (File.Exists(saveFilePath))
             {
-                doc = new XmlDocument();
-                doc.Load(saveFilePath);
-                XmlNodeList list = doc.DocumentElement.ChildNodes;
+                existingXmlDoc = new XmlDocument();
+                existingXmlDoc.Load(saveFilePath);
 
-                if (list != null && list.Count > 0)
+                XmlNodeList childs = existingXmlDoc.DocumentElement.ChildNodes;
+
+                if (childs != null && childs.Count > 0)
                 {
-                    startId = Convert.ToInt32(list.Item(list.Count - 1).Attributes["id"].Value) + 1;
+                    startId = Convert.ToInt32(childs.Item(childs.Count - 1).Attributes["id"].Value) + 1;
                 }
             }
 
-
-            XmlScriptFile results = new XmlScriptFile(GlobalVar.Config.Lang);
+            XmlScriptFile results = new XmlScriptFile(LocalConfig.Instance.Lang);
             // append the cases
             var senAndProns = Util.GetSenAndPronFromBugFixingFile(bugFixingFilePath);
 
@@ -576,7 +582,7 @@
             {
                 ScriptItem item = ScriptGenerator.GenerateScriptItem(senAndPron.Key);
 
-                ScriptWord charWord = item.AllWords.FirstOrDefault(p => p.Grapheme.Equals(GlobalVar.Config.CharName, StringComparison.InvariantCultureIgnoreCase));
+                ScriptWord charWord = item.AllWords.FirstOrDefault(p => p.Grapheme.Equals(LocalConfig.Instance.CharName, StringComparison.InvariantCultureIgnoreCase));
 
                 if (charWord != null)
                 {
@@ -590,7 +596,7 @@
                         // force to provide pronunciation when training, it's necessary for training crf model
                         if (string.IsNullOrEmpty(word.Pronunciation))
                         {
-                            word.Pronunciation = GlobalVar.Config.DefaultWordPron;
+                            word.Pronunciation = LocalConfig.Instance.DefaultWordPron;
                             word.WordType = WordType.Normal;
                         }
                     }
@@ -600,26 +606,57 @@
                 }
             }
 
-            if (!File.Exists(saveFilePath))
+            if(existingXmlDoc == null)
             {
                 results.Save(saveFilePath, System.Text.Encoding.Unicode);
             }
             else
             {
-                // if there' already an bug fixing file, save the new items to a temp path, delete it when merge with existing file
+                // if exist bug fixing file, save the new items to a temp path, delete it when merge with existing file
                 string tempFile = Path.GetTempFileName();
 
                 results.Save(tempFile, System.Text.Encoding.Unicode);
 
-                XmlDocument doc;
+                // append the temp file to existing file
+                XmlDocument tempDoc = new XmlDocument();
+                tempDoc.Load(tempFile);
+
+                foreach (XmlNode child in tempDoc.DocumentElement.ChildNodes)
+                {
+                    XmlNode newChild = existingXmlDoc.ImportNode(child, true);
+                    existingXmlDoc.DocumentElement.AppendChild(newChild);
+                }
+
+                existingXmlDoc.Save(saveFilePath);
 
                 File.Delete(tempFile);
             }
+            
+            Console.WriteLine("Generate bug fixing file " + saveFilePath);
 
+            // recompile and run test
+            CompileAndTestInFolder(outputDir);
 
-            Console.WriteLine("Generate bug fixing file " + bugFixingFile);
+            // test the bugfixing item using the newly compiled dat file
+            string bugFixingTestFile = Path.Combine(outputDir, Util.BugFixingTestFileName);
 
+            ScriptGenerator.GenRuntimeTestcase(senAndProns, bugFixingTestFile);
+            
+            string generatedDatFile = Path.Combine(outputDir, Path.GetFileName(LocalConfig.Instance.LangDataPath));
 
+            if(File.Exists(generatedDatFile))
+            {
+                string message = "";
+
+                // test with the original dat file
+                if (TestCRFModel(generatedDatFile,
+                    bugFixingTestFile,
+                    Path.Combine(outputDir, Util.BugFixingTestLogFileName),
+                    ref message))
+                {
+                    Util.ConsoleOutTextColor(message);
+                }
+            }
         }
 
         /// <summary>
@@ -690,8 +727,8 @@
             for (int i = 1; i <= radios.Length; i++)
             {
                 double diff = radios[i - 1] - aveRadio;
-                int trainCount = Convert.ToInt32(GlobalVar.Config.NCrossCaseCount * 0.9);
-                int testCount = GlobalVar.Config.NCrossCaseCount - trainCount;
+                int trainCount = Convert.ToInt32(LocalConfig.Instance.NCrossCaseCount * 0.9);
+                int testCount = LocalConfig.Instance.NCrossCaseCount - trainCount;
                 reportResults.Add(string.Format("Set{0}\t{1}\t{2}\t{3:00.00}\t{4:00.00}", i, trainCount, testCount, radios[i - 1], diff));
             }
 
@@ -726,7 +763,7 @@
                     doc.Load(configPath);
                     // currently the namespace is http://schemas.microsoft.com/tts/toolsuite
                     XmlNamespaceManager nsmgr = new XmlNamespaceManager(doc.NameTable);
-                    nsmgr.AddNamespace("ns", GlobalVar.TrainingConfigNamespace);
+                    nsmgr.AddNamespace("ns", Util.TrainingConfigNamespace);
                     XmlNode node = doc.SelectSingleNode("//ns:input[@name='$env.OutputDir']", nsmgr);
 
                     if (node != null && Directory.Exists(node.InnerText))
@@ -737,8 +774,8 @@
                         string tempTDfile = Directory.GetFiles(outputDir, "*.TD").FirstOrDefault();
                         if (tempTDfile != null)
                         {
-                            File.Copy(tempTDfile, Path.Combine(outputDir, GlobalVar.Config.OutputCRFName), true);
-                            Console.WriteLine("generate file: " + Path.Combine(outputDir, GlobalVar.Config.OutputCRFName));
+                            File.Copy(tempTDfile, Path.Combine(outputDir, LocalConfig.Instance.OutputCRFName), true);
+                            Console.WriteLine("generate file: " + Path.Combine(outputDir, LocalConfig.Instance.OutputCRFName));
                             return true;
                         }
                     }
@@ -768,7 +805,7 @@
         public void GenCRFTrainingConfig(string outputDir)
         {
             XmlDocument doc = new XmlDocument();
-            doc.LoadXml(GlobalVar.Config.TrainingConfigTemplate);
+            doc.LoadXml(LocalConfig.Instance.TrainingConfigTemplate);
 
             foreach (XmlNode node in doc.DocumentElement.GetElementsByTagName("include").Item(0))
             {
@@ -776,34 +813,34 @@
                 switch (attribute)
                 {
                     case "$feature.TargetWord":
-                        node.InnerXml = GlobalVar.Config.CharName;
+                        node.InnerXml = LocalConfig.Instance.CharName;
                         break;
                     case "$env.Language":
-                        node.InnerXml = Localor.LanguageToString(GlobalVar.Config.Lang);
+                        node.InnerXml = Localor.LanguageToString(LocalConfig.Instance.Lang);
                         break;
                     case "$env.LexiconSchemaFile":
                     case "$env.PhoneSetFile":
-                        node.InnerXml = node.InnerXml.Replace("#branch_root#", GlobalVar.Config.BranchRootPath).Replace("#lang#", Localor.LanguageToString(GlobalVar.Config.Lang));
+                        node.InnerXml = node.InnerXml.Replace("#branch_root#", LocalConfig.Instance.BranchRootPath).Replace("#lang#", Localor.LanguageToString(LocalConfig.Instance.Lang));
                         break;
                     case "$env.LinguisticFeatureListFile":
-                        node.InnerXml = Path.Combine(outputDir, GlobalVar.FeatureConfigFileName);
+                        node.InnerXml = Path.Combine(outputDir, Util.FeatureConfigFileName);
                         break;
                     case "$env.OutputDir":
                         node.InnerXml = outputDir;
                         break;
                     case "$env.Script":
-                        node.InnerXml = Path.Combine(outputDir, GlobalVar.TrainingFolderName);
+                        node.InnerXml = Path.Combine(outputDir, Util.TrainingFolderName);
                         break;
                     default:
                         break;
                 }
             }
 
-            doc.Save(Path.Combine(outputDir, GlobalVar.TrainingConfigFileName));
+            doc.Save(Path.Combine(outputDir, Util.TrainingConfigFileName));
 
             // copy the feature.config
-            doc.LoadXml(GlobalVar.Config.FeaturesConfigTemplate);
-            doc.Save(Path.Combine(outputDir, GlobalVar.FeatureConfigFileName));
+            doc.LoadXml(LocalConfig.Instance.FeaturesConfigTemplate);
+            doc.Save(Path.Combine(outputDir, Util.FeatureConfigFileName));
         }
 
         /// <summary>
@@ -811,13 +848,13 @@
         /// </summary>
         /// <param name="crfFilePath">trained crf file</param>
         /// <param name="crfModelDir">crf model folder</param>
-        public bool CompileLangData(string crfFilePath, string crfModelDir, string outputDir, out string generatedFilePath)        /// <param name="outputDir">data file output folder</param>
-                                                                                                                                   /// <returns>generated dat fiel path</returns>
-
+        /// <param name="outputDir">data file output folder</param>
+        /// <param name="generatedFilePath">generated dat file path</param>
+        public bool CompileLangData(string crfFilePath, string crfModelDir, string outputDir, out string generatedFilePath)
         {
             string message;
             // use the langDataPath
-            string srcDataFilePath = GlobalVar.Config.LangDataPath;
+            string srcDataFilePath = LocalConfig.Instance.LangDataPath;
 
             // copy the original dat file to outputDir
             generatedFilePath = Path.Combine(outputDir, Path.GetFileName(srcDataFilePath));
@@ -869,7 +906,7 @@
 
             #region Update polyrule.txt file
 
-            UpdatePolyRuleFile(GlobalVar.Config.PolyRuleFilePath, GlobalVar.Config.CharName);
+            UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, LocalConfig.Instance.CharName);
 
             #endregion
 
@@ -883,18 +920,29 @@
             Console.WriteLine(message);
 
             // edit the mapping file
-            UpdateCRFModelMappingFile(crfMappingFilePath, Path.GetFileName(crfFilePath), GlobalVar.Config.UsingInfo);
+            string[] crfFileNames = UpdateCRFModelMappingFile(crfMappingFilePath, Path.GetFileName(crfFilePath), LocalConfig.Instance.UsingInfo);
 
             SdCommand.SdRevertUnchangedFile(crfMappingFilePath, out message);
 
-            // TODO check ModelUsed folder
+            // make sure ModelUsed contains only crf files in CRFLocalizedMapping.txt file, if not, the compiled dat will wrong
+            foreach (string crfPath in Directory.GetFiles(crfModelDir, Util.CRFFileSearchExtension))
+            {
+                string fileName = Path.GetFileName(crfPath);
+
+                if(!crfFileNames.Contains(fileName, StringComparer.OrdinalIgnoreCase))
+                {
+                    // delete the crf file not declared in mapping file
+                    File.Delete(crfPath);
+                }
+            }
+
             #endregion
 
             #region Compile
 
             string tempCRFBinFile;
 
-            if (!CompileCRF(crfModelDir, GlobalVar.Config.Lang, out tempCRFBinFile))
+            if (!CompileCRF(crfModelDir, LocalConfig.Instance.Lang, out tempCRFBinFile))
             {
                 throw new Exception("Compile crf file failed for " + crfFilePath);
             }
@@ -979,6 +1027,7 @@
         /// Delete "All >= 0" line if polyrule.txt file contains
         /// 
         /// polyrule.txt is like below, we should remove All >= 0 : "b eh_h i_l"; to make CRF model working
+        /// [domain=address]
         /// CurW = "背";
         /// PrevW = "肩" : "b eh_h i_h";
         /// PrevW = "越" : "b eh_h i_h";
@@ -994,10 +1043,35 @@
             int lineNumber = 1;
             bool needModify = true;
 
+            bool isGeneralRule = true;
             string currentChar = "";
             string prevChar = "";
+
+            // use this regex to find rule is used for which word
+            Regex rxChar = new Regex("CurW = \"(.+)\";", RegexOptions.Compiled);
+
             // TODO: update function
-            //using (StreamReader reader = new StreamReader(filePath))
+            using (StreamReader reader = new StreamReader(filePath))
+            {
+                while (reader.Peek() > -1)
+                {
+                    string lineContent = reader.ReadLine().Trim();
+
+                    if(lineContent.StartsWith("[domain"))
+                    {
+                        isGeneralRule = false;
+                    }
+                    else if (rxChar.IsMatch(lineContent))
+                    {
+                        currentChar = rxChar.Match(lineContent).Groups[1].Value;
+
+                        if(string.Equals(currentChar, charName))
+                        {
+
+                        }
+                    }
+                }
+            }
             //{
             //    for (string line = reader.ReadLine(); line != null; line = reader.ReadLine())
             //    {
@@ -1013,7 +1087,7 @@
             //            string currentUsingInfo = mapping[3];
 
             //            // if current line's char is same with charName para, check whether need to modify this line
-            //            if (string.Equals(currentChar, GlobalVar.Config.CharName))
+            //            if (string.Equals(currentChar, LocalConfig.Instance.CharName))
             //            {
             //                // if crf file name and using info are same, don't modify
             //                // else edit thie line
@@ -1036,7 +1110,7 @@
 
             //if (needModify)
             //{
-            //    string content = string.Format("{0}\t->\t{1}\t{2}", GlobalVar.Config.CharName, crfFileName, usingInfo);
+            //    string content = string.Format("{0}\t->\t{1}\t{2}", LocalConfig.Instance.CharName, crfFileName, usingInfo);
             //    Util.EditLineInFile(filePath, lineNumber, content, !charExist);
             //}
         }
@@ -1057,12 +1131,15 @@
         /// <param name="filePath">crf mapping File Path.</param>
         /// <param name="crfFileName">crf file name</param>
         /// <param name="usingInfo">check the char whether to be used, in mapping file "Being_used" or "Unused"</param>
-        public void UpdateCRFModelMappingFile(string filePath, string crfFileName, string usingInfo)
+        /// <returns>crf model files array, like bei.crf, wei.crf</returns>
+        public string[] UpdateCRFModelMappingFile(string filePath, string crfFileName, string usingInfo)
         {
             if (!string.Equals(usingInfo, "Being_used") && !string.Equals(usingInfo, "Unused"))
             {
                 throw new ArgumentException("usingInfo can only be \"Being_used\" or \"Unused\"!");
             }
+
+            List<string> crfFileNames = new List<string>();
 
             // start flag of crf model mapping data
             const string MappingFlag = "Map between polyphony model:";
@@ -1096,7 +1173,7 @@
                         string currentUsingInfo = mapping[3];
 
                         // if current line's char is same with charName para, check whether need to modify this line
-                        if (string.Equals(currentChar, GlobalVar.Config.CharName))
+                        if (string.Equals(currentChar, LocalConfig.Instance.CharName))
                         {
                             // if crf file name and using info are same, don't modify
                             // else edit thie line
@@ -1104,14 +1181,15 @@
                                 string.Equals(currentUsingInfo, usingInfo))
                             {
                                 needModify = false;
-                                break;
                             }
                             else
                             {
                                 charExist = true;
-                                break;
                             }
                         }
+
+                        crfFileNames.Add(currentCRFFile);
+
                     }
                     ++lineNumber;
                 }
@@ -1119,9 +1197,11 @@
 
             if (needModify)
             {
-                string content = string.Format("{0}\t->\t{1}\t{2}", GlobalVar.Config.CharName, crfFileName, usingInfo);
+                string content = string.Format("{0}\t->\t{1}\t{2}", LocalConfig.Instance.CharName, crfFileName, usingInfo);
                 Util.EditLineInFile(filePath, lineNumber, content, !charExist);
             }
+
+            return crfFileNames.ToArray();
         }
 
         /// <summary>
@@ -1141,8 +1221,8 @@
                 string frontendMeasureDir = Path.GetDirectoryName(Util.FrontendMeasurePath);
                 string[] requiredDllPaths =
                 {
-                    Path.Combine(GlobalVar.Config.OfflineToolPath, "Microsoft.Tts.Offline.dll"),
-                    Path.Combine(GlobalVar.Config.OfflineToolPath, "System.Speech.dll"),
+                    Path.Combine(LocalConfig.Instance.OfflineToolPath, "Microsoft.Tts.Offline.dll"),
+                    Path.Combine(LocalConfig.Instance.OfflineToolPath, "System.Speech.dll"),
                     Path.Combine(frontendMeasureDir, "Avatar", "HostCommon.dll"),
                     Path.Combine(frontendMeasureDir, "Avatar", "TestEngine_UTest.dll")
                 };
@@ -1157,7 +1237,7 @@
                 }
 
                 // copy generaetd data file to offline\LocaleHandler folder
-                string datDestPath = Path.Combine(GlobalVar.Config.OfflineToolPath, "LocaleHandler", Path.GetFileName(srcDatFile));
+                string datDestPath = Path.Combine(LocalConfig.Instance.OfflineToolPath, "LocaleHandler", Path.GetFileName(srcDatFile));
 
                 // make sure the destination dat file can be overwrite
                 FileInfo fi = new FileInfo(datDestPath);
@@ -1171,7 +1251,13 @@
 
                 Console.WriteLine("copy " + srcDatFile + " to " + datDestPath);
 
-                Console.WriteLine("FrontendMeasure.exe" + string.Format("-mode runtest -x {0} -log {1}", testcaseFile, logPath));
+                Console.WriteLine(string.Format("FrontendMeasure.exe -mode runtest -x {0} -log {1}", testcaseFile, logPath));
+
+                // delete the existing log file
+                if(File.Exists(logPath))
+                {
+                    File.Delete(logPath);
+                }
 
                 Int32 sdExitCode = CommandLine.RunCommandWithOutputAndError(Util.FrontendMeasurePath,
                         string.Format("-mode runtest -x {0} -log {1}", testcaseFile, logPath), null, ref sdMsg);
@@ -1209,13 +1295,13 @@
             }
 
             Task[] tasks;
-            if (inFilePaths.Length <= GlobalVar.Config.MaxThreadCount)
+            if (inFilePaths.Length <= LocalConfig.Instance.MaxThreadCount)
             {
                 tasks = new Task[inFilePaths.Length];
             }
             else
             {
-                tasks = new Task[GlobalVar.Config.MaxThreadCount];
+                tasks = new Task[LocalConfig.Instance.MaxThreadCount];
             }
 
             Util.ConsoleOutTextColor("Start word breaking");
@@ -1246,7 +1332,7 @@
         /// <param name="outputDir">output folder</param>
         private void WordBreakFiles(string[] fileProcessed, string outputDir)
         {
-            using (WordBreaker breaker = WordBreaker.GenWordBreaker(GlobalVar.Config))
+            using (WordBreaker wordBreaker = new WordBreaker(LocalConfig.Instance))
             {
                 foreach (string filePath in fileProcessed)
                 {
@@ -1281,7 +1367,7 @@
 
                             try
                             {
-                                File.AppendAllText(outputFilePath, breaker.BreakWords(sentence).SpaceSeparate());
+                                File.AppendAllText(outputFilePath, wordBreaker.BreakWords(sentence).SpaceSeparate());
                                 File.AppendAllText(outputFilePath, Environment.NewLine);
                                 ++counter;
                             }
@@ -1290,8 +1376,8 @@
                                 continue;
                             }
 
-                            if (counter >= GlobalVar.Config.ShowTipCount &&
-                                counter % GlobalVar.Config.ShowTipCount == 0)
+                            if (counter >= LocalConfig.Instance.ShowTipCount &&
+                                counter % LocalConfig.Instance.ShowTipCount == 0)
                             {
                                 Console.WriteLine(string.Format("Searching {0} in {1}", counter, fileName));
                             }

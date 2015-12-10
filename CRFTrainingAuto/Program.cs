@@ -39,16 +39,24 @@
 
                 return ExitCode.InvalidArgument;
             }
-
-            GlobalVar gv = null;
+            
             if (!string.IsNullOrEmpty(arguments.ConfigPath))
             {
                 LocalConfig.Create(arguments.ConfigPath);
-
-                gv = new GlobalVar(LocalConfig.Instance);
             }
 
             CRFHelper crfHelper = new CRFHelper();
+
+            // TODO
+            bool isMatch = System.Text.RegularExpressions.Regex.IsMatch("CurW = \"一个\";", "CurW = (.*);");
+            Console.WriteLine(isMatch);
+            var match = System.Text.RegularExpressions.Regex.Match("CurW = \"一个\";", "CurW = \"(.+)\";");
+
+            Debug.WriteLine(match.Groups[0].Value);
+            Debug.WriteLine(match.Groups[1].Value);
+            return 1;
+            // crfHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, LocalConfig.Instance.CharName);
+
 
             switch (arguments.Mode)
             {
@@ -106,11 +114,6 @@
                     break;
                 default:
                     break;
-            }
-
-            if (gv != null)
-            {
-                gv.ReleaseBreaker();
             }
 
             return ExitCode.NoError;

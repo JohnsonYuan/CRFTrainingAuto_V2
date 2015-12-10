@@ -17,7 +17,7 @@
         {
             get
             {
-                string sdToolPath = Path.Combine(GlobalVar.Config.BranchRootPath, @"tools\coretools\sd.exe");
+                string sdToolPath = Path.Combine(LocalConfig.Instance.BranchRootPath, @"tools\coretools\sd.exe");
 
                 return sdToolPath;
             }
