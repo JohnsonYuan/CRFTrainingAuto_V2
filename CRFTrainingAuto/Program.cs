@@ -14,7 +14,7 @@ namespace CRFTrainingAuto
     using System.IO;
     using System.Linq;
     using Microsoft.Tts.Offline.Utility;
-
+    using Microsoft.Tts.Offline.Frontend;
     public class Program
     {
         /// <summary>
@@ -64,18 +64,37 @@ namespace CRFTrainingAuto
             string generatedBakFilePath = @"D:\WorkFolder\Test\MSTTSLocZhCN.dat.bak";
 
             string[] tempFiles = {
-                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyphony.address.bin",
-                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyphony.bin",
-                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyphony.message.bin",
-                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyphony.name.bin",
+                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyrule.address.bin",
+                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyrule.bin",
+                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyrule.message.bin",
+                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyrule.name.bin",
             };
 
+            RuleFile ruleFile = new RuleFile();
+            ruleFile.Load(LocalConfig.Instance.PolyRuleFilePath);
+            RuleFile[] ruleFiles = ruleFile.Split();
+
+            string[] txtFiles = {
+                @"D:\WorkFolder\Test\polyrule.address.txt",
+                @"D:\WorkFolder\Test\polyrule.general.txt",
+                @"D:\WorkFolder\Test\polyrule.message.txt",
+                @"D:\WorkFolder\Test\polyrule.name.txt",
+            };
+
+            foreach (var item in txtFiles)
+            {
+                string tempBin;
+                CompilerHelper.CompileGeneralRule(item, out tempBin);
+                File.Copy(tempBin,@"D:\WorkFolder\Test\" + Path.GetFileNameWithoutExtension(item) + ".bin");
+            }
+
+            return 1;
             foreach (var item in tempFiles)
             {
                 Microsoft.Tts.Offline.Compiler.LanguageData.LanguageDataHelper.ReplaceBinaryFile(
-         generatedFilePath,
-         item,
-         Microsoft.Tts.Offline.Compiler.LanguageData.ModuleDataName.PolyphoneRule);
+                 generatedFilePath,
+                 item,
+                 Microsoft.Tts.Offline.Compiler.LanguageData.ModuleDataName.PolyphoneRule);
             }
 
             return 1;
