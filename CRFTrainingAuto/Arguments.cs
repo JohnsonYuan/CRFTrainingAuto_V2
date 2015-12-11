@@ -10,28 +10,33 @@
 
 namespace CRFTrainingAuto
 {
-    using Microsoft.Tts.Offline;
-    using Microsoft.Tts.Offline.Utility;
     using System;
     using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
-    using System.Text;
+    using Microsoft.Tts.Offline.Utility;
 
     /// <summary>
     /// Command line arguments.
     /// </summary>
     [Comment("CRF Training Automation tool let you train crf process more easyier.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1309:FieldNamesMustNotBeginWithUnderscore", Justification = "Reviewed.")]
     public class Arguments
     {
+        #region constant fields
+
+        private const string ExcelFileExtension = ".xls";
+        private const string TxtFileExtension = ".txt";
+        private const string XmlFileExtension = ".xml";
+
+        #endregion
+
         #region Fields used by command line parser
 
         [Argument("mode", Description = "Specifies the execute mode: FilterChar, CompileAndTest, NCRF, GenVerify, GenXlsTestReport, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge",
             Optional = false, UsagePlaceholder = "executeMode", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge, Rand")]
         private string _mode = string.Empty;
 
-        [Argument("config", Description = "config file path",
-            Optional = false, UsagePlaceholder = "configPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Merge, Rand")]
+        [Argument("config", Description = "config file path", Optional = false, UsagePlaceholder = "configPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Merge, Rand")]
         private string _configPath = string.Empty;
 
         [Argument("i", Description = "input path",
@@ -44,7 +49,7 @@ namespace CRFTrainingAuto
 
         [Argument("wbFolder", Description = "word break result folder",
             Optional = true, UsagePlaceholder = "wbPath", OptionalModes = "FilterChar, WB")]
-        private string _wbPath = string.Empty;
+        private string _wordBreakPath = string.Empty;
 
         [Argument("u", Description = "split unit(GB, MB, KB, Byte)",
             Optional = false, UsagePlaceholder = "splitunit", RequiredModes = "Split")]
@@ -62,10 +67,6 @@ namespace CRFTrainingAuto
             Optional = true, UsagePlaceholder = "needWb", OptionalModes = "GenXls")]
         private int _isNeedWb = 0;
 
-        private const string ExcelFileExtension = ".xls";
-        private const string TxtFileExtension = ".txt";
-        private const string XmlFileExtension = ".xml";
-        
         #endregion
 
         #region Enums
@@ -76,72 +77,72 @@ namespace CRFTrainingAuto
         public enum ExecuteMode
         {
             /// <summary>
-            ///  Generate txt file contains single training char from folder
+            ///  Generate txt file contains single training char from folder.
             /// </summary>
             FilterChar,
 
             /// <summary>
-            /// Compile and run test
+            /// Compile and run test.
             /// </summary>
             Compile,
 
             /// <summary>
-            ///  Generate excel report verify excel
+            ///  Generate excel report verify excel.
             /// </summary>
             GenVerify,
             
             /// <summary>
-            ///  Generate excel report from frontmeasure.exe test result
+            ///  Generate excel report from frontmeasure.exe test result.
             /// </summary>
             GenXlsTestReport,
 
             /// <summary>
-            ///  Generate NCrossData from excelr
+            ///  Generate NCrossData from excelr.
             /// </summary>
             NCRF,
 
             /// <summary>
-            /// Generate excel from txt file, it's often called by internal functions
+            /// Generate excel from txt file, it's often called by internal functions.
             /// </summary>
             GenXls,
 
             /// <summary>
-            /// Generate training script
+            /// Generate training script.
             /// </summary>
             GenTrain,
 
             /// <summary>
-            /// Generate test case script
+            /// Generate test case script.
             /// </summary>
             GenTest,
 
             /// <summary>
-            /// Add bug fixing items to the new crf model and retrain the data
+            /// Add bug fixing items to the new crf model and retrain the data.
             /// </summary>
             BugFixing,
 
             /// <summary>
-            /// Word break
+            /// Word break.
             /// </summary>
             WB,
 
             /// <summary>
-            /// Sentence separate
+            /// Sentence separate.
             /// </summary>
             SS,
 
             /// <summary>
-            /// Split file
+            /// Split file.
             /// </summary>
             Split,
             
             /// <summary>
-            /// Merge files to one file
+            /// Merge files to one file.
             /// </summary>
             Merge,
 
             /// <summary>
-            /// Random select cases
+            /// Random select cases.
             /// </summary>
             Rand,
         }
@@ -159,7 +160,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Input path could be a file path or a folder path depends on mode
+        /// Input path could be a file path or a folder path depends on mode.
         /// </summary>
         public string InputPath
         {
@@ -167,7 +168,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Onput path could be a file path or a folder path depends on mode
+        /// Onput path could be a file path or a folder path depends on mode.
         /// </summary>
         public string OutputPath
         {
@@ -175,14 +176,14 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Word break result file path
+        /// Word break result file path.
         /// </summary>
         public string WbPath
         {
-            get { return _wbPath; }
+            get { return _wordBreakPath; }
         }
         /// <summary>
-        /// Config file path
+        /// Config file path.
         /// </summary>
         public string ConfigPath
         {
@@ -190,7 +191,7 @@ namespace CRFTrainingAuto
         }
         
         /// <summary>
-        /// Split unit, GB, MB, KB, Byte
+        /// Split unit, GB, MB, KB, Byte.
         /// </summary>
         public string SplitUnit
         {
@@ -198,7 +199,7 @@ namespace CRFTrainingAuto
         }
         
         /// <summary>
-        /// Split file size
+        /// Split file size.
         /// </summary>
         public int SplitSize
         {
@@ -207,7 +208,7 @@ namespace CRFTrainingAuto
 
 
         /// <summary>
-        /// Script start index, if it is number, then the start index plus 1, if it as an script file path, the start index will be the last item in the script plus 1
+        /// Script start index, if it is number, then the start index plus 1, if it as an script file path, the start index will be the last item in the script plus 1.
         /// </summary>
         public string StartIndexOrFilePath
         {
@@ -215,7 +216,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// whether need wrod break when genereate excel file
+        /// whether need wrod break when genereate excel file.
         /// </summary>
         public int IsNeedWb
         {
@@ -225,9 +226,9 @@ namespace CRFTrainingAuto
         #endregion
 
         /// <summary>
-        /// validate the arguments
+        /// Validate the arguments.
         /// </summary>
-        /// <returns>error messages</returns>
+        /// <returns>error messages.</returns>
         public IEnumerable<string> Validate()
         {
             string msg = null;
@@ -248,8 +249,8 @@ namespace CRFTrainingAuto
                     }
 
                     // check word break result folder if provided
-                    if (!string.IsNullOrEmpty(_wbPath) &&
-                        !IsDirectoryExist(_wbPath, ref msg))
+                    if (!string.IsNullOrEmpty(_wordBreakPath) &&
+                        !IsDirectoryExist(_wordBreakPath, ref msg))
                     {
                         yield return msg;
                     }
@@ -361,33 +362,34 @@ namespace CRFTrainingAuto
                 _configPath = Util.GetAbsolutePath(_configPath);
                 if (!File.Exists(_configPath))
                 {
-                    yield return String.Format("{0} not exist!", _configPath);
+                    yield return Helper.NeutralFormat("{0} not exist!", _configPath);
                 }
             }
         }
 
         /// <summary>
-        /// Error message if file not exist
+        /// Error message if file not exist.
         /// </summary>
-        /// <param name="filePath">filePath</param>
-        /// <param name="msg">error message</param>
-        /// <returns>true or false</returns>
+        /// <param name="filePath">filePath.</param>
+        /// <param name="msg">error message.</param>
+        /// <returns>true or false.</returns>
         private bool IsFileExist(string filePath, ref string msg)
         {
             if (!File.Exists(filePath))
             {
-                msg = string.Format("{0} doesn't exist!", filePath);
+                msg = Helper.NeutralFormat("{0} doesn't exist!", filePath);
                 return false;
             }
 
             return true;
         }
+
         /// <summary>
-        /// Error message if directory not exist
+        /// Error message if directory not exist.
         /// </summary>
-        /// <param name="dirPath">directory</param>
-        /// <param name="msg">error message</param>
-        /// <returns>true or false</returns>
+        /// <param name="dirPath">directory.</param>
+        /// <param name="msg">error message.</param>
+        /// <returns>true or false.</returns>
         private bool IsDirectoryExist(string dirPath, ref string msg)
         {
             if (string.IsNullOrEmpty(dirPath))
@@ -398,7 +400,7 @@ namespace CRFTrainingAuto
 
             if (!Directory.Exists(dirPath))
             {
-                msg = string.Format("{0} is not a directory or it doesn't exist!", dirPath);
+                msg = Helper.NeutralFormat("{0} is not a directory or it doesn't exist!", dirPath);
                 return false;
             }
 
@@ -406,12 +408,12 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Error message for if file not match the required extension
+        /// Error message for if file not match the required extension.
         /// </summary>
-        /// <param name="filePath">file path</param>
-        /// <param name="extension">required extension</param>
-        /// <param name="msg">error message</param>
-        /// <returns>true or false</returns>
+        /// <param name="filePath">file path.</param>
+        /// <param name="extension">required extension.</param>
+        /// <param name="msg">error message.</param>
+        /// <returns>true or false.</returns>
         private bool IsMatchFileExtension(string filePath, string extension, ref string msg, bool checkExist = true)
         {
             if (string.IsNullOrEmpty(filePath))
@@ -422,12 +424,12 @@ namespace CRFTrainingAuto
 
             if (checkExist && !File.Exists(filePath))
             {
-                msg = string.Format("{0} doesn't exist!", filePath);
+                msg = Helper.NeutralFormat("{0} doesn't exist!", filePath);
                 return false;
             }
             else if (!string.Equals(Path.GetExtension(filePath), extension))
             {
-                msg = string.Format("{0} is not a {1} file!", filePath, extension.Substring(extension.IndexOf(".") + 1));
+                msg = Helper.NeutralFormat("{0} is not a {1} file!", filePath, extension.Substring(extension.IndexOf(".") + 1));
                 return false;
             }
             return true;

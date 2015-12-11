@@ -1,18 +1,39 @@
-﻿namespace CRFTrainingAuto
+﻿//-----------------------------------------------------------------------------------------
+// <copyright file="Extensions.cs" company="Microsoft">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
+// </copyright>
+//
+// <summary>
+//     Extension methods for string.
+// </summary>
+//-----------------------------------------------------------------------------------------
+namespace CRFTrainingAuto
 {
-    #region Extension Methods
+    /// <summary>
+    /// String extesions.
+    /// </summary>
     public static class StringExtensions
     {
         /// <summary>
-        /// Check if current string contains single char, using generated word break file
+        /// Check if current string contains single char, using generated word break file.
         /// </summary>
-        /// <param name="content">input</param>
-        /// <param name="charName">char name</param>
-        /// <param name="wbResult">word break result</param>
-        /// <returns></returns>
+        /// <param name="content">input.</param>
+        /// <param name="charName">char name.</param>
+        /// <param name="wbResult">word break result.</param>
+        /// <returns>char index, return -1 if not found</returns>
         public static int GetSingleCharIndexOfLine(this string content, string charName, string[] wbResult)
         {
-            int index = content.IndexOf(charName);
+            if (string.IsNullOrEmpty(content))
+            {
+                throw new System.ArgumentNullException("content");
+            }
+
+            if (wbResult == null || wbResult.Length == 0)
+            {
+                throw new System.ArgumentNullException("wbResult");
+            }
+
+            int index = content.IndexOf(charName, System.StringComparison.Ordinal);
 
             // if contains char, check if contains single char
             if (index > -1)
@@ -136,6 +157,4 @@
             return content.Trim().Split(new char[] { ' ' });
         }
     }
-
-    #endregion
 }

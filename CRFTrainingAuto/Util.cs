@@ -1,10 +1,19 @@
-﻿namespace CRFTrainingAuto
+﻿//----------------------------------------------------------------------------
+// <copyright file="Util.cs" company="MICROSOFT">
+//      Copyright (c) Microsoft Corporation.  All rights reserved.
+// </copyright>
+//
+// <summary>
+//      Util
+// </summary>
+//----------------------------------------------------------------------------
+namespace CRFTrainingAuto
 {
-    using Microsoft.Tts.Offline.Utility;
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Text;
+    using Microsoft.Tts.Offline.Utility;
 
     public static class Util
     {
@@ -64,7 +73,7 @@
         #region Properties
 
         /// <summary>
-        /// ProsodyModelTrainer.exe path, used to train crf model
+        /// Gets ProsodyModelTrainer.exe path, used to train crf model.
         /// </summary>
         public static string ProsodyModelTrainerPath
         {
@@ -77,7 +86,7 @@
         }
 
         /// <summary>
-        /// FrontendMeasure.exe tool path, used to run test case
+        /// Gets FrontendMeasure.exe tool path, used to run test case.
         /// </summary>
         public static string FrontendMeasurePath
         {
@@ -90,16 +99,29 @@
             }
         }
 
+        /// <summary>
+        /// Gets polycomp.exe path, used to compile polyrule.txt.
+        /// </summary>
+        public static string RuleCompilerPath
+        {
+            get
+            {
+                string toolPath = Path.Combine(LocalConfig.Instance.OfflineToolPath, "polycomp.exe");
+
+                return toolPath;
+            }
+        }
+
         #endregion
 
         #region public methods
 
         /// <summary>
-        /// Merge all files to a single file
+        /// Merge all files to a single file.
         /// </summary>
-        /// <param name="wildcard">file path contains wildcard</param>
-        /// <param name="saveFilePath">output file path</param>
-        /// <returns>files.Length</returns>
+        /// <param name="wildcard">file path contains wildcard.</param>
+        /// <param name="saveFilePath">output file path.</param>
+        /// <returns>files.Length.</returns>
         public static int MergeFiles(string wildcard, string saveFilePath)
         {
             string[] files = GetAllFiles(wildcard);
@@ -152,13 +174,13 @@
         }
 
         /// <summary>
-        /// Splict large files and save to
+        /// Splict large files and save to.
         /// </summary>
-        /// <param name="splitUnit">split unit, GB, MB, KB, Byte</param>
-        /// <param name="intFlag">split size</param>
-        /// <param name="inFilePath">input file path</param>
-        /// <param name="outputDir">output folder</param>
-        /// <returns>splict success fail or not</returns>
+        /// <param name="splitUnit">split unit, GB, MB, KB, Byte.</param>
+        /// <param name="intFlag">split size.</param>
+        /// <param name="inFilePath">input file path.</param>
+        /// <param name="outputDir">output folder.</param>
+        /// <returns>splict success fail or not.</returns>
         public static bool SplitFile(string splitUnit, int intFlag, string inFilePath, string outputDir)
         {
             bool suc = false;
@@ -203,7 +225,7 @@
                 {
                     splitFileStream = null;
 
-                    Byte[] tempBytes;
+                    byte[] tempBytes;
 
                     for (int i = 1; i <= fileCount; i++)
                     {
@@ -228,7 +250,8 @@
                                 }
 
                                 bw.Write(splitFileReader.ReadByte());
-                            } while (!isEndLine);
+                            }
+                            while (!isEndLine);
                         }
                     }
 
@@ -256,10 +279,10 @@
         }
 
         /// <summary>
-        /// Get all files from a file path with wildcard such as "*" and "?"
+        /// Get all files from a file path with wildcard such as "*" and "?".
         /// </summary>
-        /// <param name="wildcard">the file path with wildcard</param>
-        /// <returns>the files</returns>
+        /// <param name="wildcard">the file path with wildcard.</param>
+        /// <returns>the files.</returns>
         public static string[] GetAllFiles(string wildcard)
         {
             if (Path.IsPathRooted(wildcard))
@@ -273,21 +296,24 @@
         }
 
         /// <summary>
-        /// if path is config/training.config, convert to D:/config/training.config
+        /// if path is config/training.config, convert to D:/config/training.config.
         /// </summary>
+        /// <param name="path">file path.</param>
+        /// <returns>absolute path.</returns>
         public static string GetAbsolutePath(string path)
         {
             if (!Path.IsPathRooted(path))
             {
                 return Path.Combine(Environment.CurrentDirectory, path);
             }
+
             return path;
         }
 
         /// <summary>
-        /// Create directory if not exist
+        /// Create directory if not exist.
         /// </summary>
-        /// <param name="dirPath">directory path</param>
+        /// <param name="dirPath">directory path.</param>
         public static void CreateDirIfNotExist(string dirPath)
         {
             if (!Directory.Exists(dirPath))
@@ -311,12 +337,12 @@
         }
 
         /// <summary>
-        /// Modify or insert new value for some line
+        /// Modify or insert new value for some line.
         /// </summary>
-        /// <param name="filePath">the file to be modified</param>
-        /// <param name="lineNumber">line number</param>
-        /// <param name="newLineValue">new value for line</param>
-        /// <param name="insert">if true, new value will be inserted, if false, original value in this line will be replaced</param>
+        /// <param name="filePath">the file to be modified.</param>
+        /// <param name="lineNumber">line number.</param>
+        /// <param name="newLineValue">new value for line, if null, remove this line.</param>
+        /// <param name="insert">if true, new value will be inserted, if false, original value in this line will be replaced.</param>
         public static void EditLineInFile(string filePath, int lineNumber, string newLineValue, bool insert = true)
         {
             StringBuilder sb = new StringBuilder();
@@ -329,13 +355,15 @@
                     if (lineNumber == curLine)
                     {
                         // if don't insert, just skip this line
-                        if (!insert)
+                        if (!insert || newLineValue == null)
                         {
                             reader.ReadLine();
                         }
+                        else
+                        {
 
-
-                        sb.Append(newLineValue + Environment.NewLine);
+                            sb.Append(newLineValue + Environment.NewLine);
+                        }
                     }
                     else
                     {
@@ -347,6 +375,7 @@
 
             // current line shoud - 1
             --curLine;
+
             // if lineNumber large than current file's line, append blank line, and the new line
             if (lineNumber > curLine)
             {
@@ -354,20 +383,21 @@
                 {
                     sb.AppendLine();
                 }
+
                 sb.AppendLine(newLineValue);
             }
 
-            using (StreamWriter writer = new StreamWriter(filePath))
+            using (StreamWriter writer = new StreamWriter(filePath, false, Encoding.Unicode))
             {
                 writer.Write(sb.ToString());
             }
         }
 
         /// <summary>
-        /// Set the console text color
+        /// Set the console text color.
         /// </summary>
-        /// <param name="content">content</param>
-        /// <param name="color">color, default green</param>
+        /// <param name="content">content.</param>
+        /// <param name="color">color, default green.</param>
         public static void ConsoleOutTextColor(string content, ConsoleColor color = ConsoleColor.Green)
         {
             ConsoleColor consolePrevColor = Console.ForegroundColor;
@@ -377,143 +407,155 @@
         }
 
         /// <summary>
-        /// Get same file name but different extension
+        /// Get same file name but different extension.
         /// </summary>
         /// <example>
-        /// change D:\filename.txt to D:\filename.xls
+        /// change D:\filename.txt to D:\filename.xls.
         /// </example>
-        /// <param name="fileName">file name</param>
-        /// <param name="newExtension">new extension name</param>
-        /// <returns></returns>
+        /// <param name="filePath">file path.</param>
+        /// <param name="newExtension">new extension name.</param>
+        /// <returns>new file path.</returns>
         public static string ChangeFileExtension(string filePath, string newExtension)
         {
-            return Path.Combine(Path.GetDirectoryName(filePath),
+            return Path.Combine(
+                Path.GetDirectoryName(filePath),
                 Path.GetFileNameWithoutExtension(filePath) + newExtension);
         }
 
         /// <summary>
-        /// Get case and wb result from corpus file
+        /// Get case and wb result from corpus file.
         /// </summary>
-        /// <param name="inputFilePath">txt corpus file path</param>
-        /// <param name="hasWbResult">whether the file has word break</param>
-        /// <returns></returns>
-        public static IList<SentenceAndWbResult> GetSenAndWbFromCorpus(string inputFilePath, bool hasWbResult = true)
+        /// <param name="inputFilePath">txt corpus file path.</param>
+        /// <param name="hasWbResult">whether the file has word break.</param>
+        /// <returns>sentence and word break result.</returns>
+        public static IList<SentenceAndWBResult> GetSenAndWbFromCorpus(string inputFilePath, bool hasWbResult = true)
         {
             Helper.ThrowIfFileNotExist(inputFilePath);
 
-            List<SentenceAndWbResult> results = new List<SentenceAndWbResult>();
+            List<SentenceAndWBResult> results = new List<SentenceAndWBResult>();
 
             WordBreaker wordBreaker = null;
 
-            using (StreamReader reader = new StreamReader(inputFilePath))
+            try
             {
-                while (reader.Peek() > -1)
+                using (StreamReader reader = new StreamReader(inputFilePath))
                 {
-                    string caseLine = reader.ReadLine().Trim();
-
-                    if (hasWbResult)
+                    while (reader.Peek() > -1)
                     {
-                        if (reader.Peek() > -1)
+                        string caseLine = reader.ReadLine().Trim();
+
+                        if (hasWbResult)
                         {
-                            // we use the wbResult to generate the case, because we have to remove empty part
-                            // in the case, and it's hard to list all space possibility, like space, tab, or unicode empty char(8195)
-                            var wbResult = reader.ReadLine().SplitBySpace();
-                            results.Add(new SentenceAndWbResult
+                            if (reader.Peek() > -1)
                             {
-                                Content = wbResult.ConcatToString(),
-                                WbResult = wbResult
-                            });
+                                // we use the wbResult to generate the case, because we have to remove empty part
+                                // in the case, and it's hard to list all space possibility, like space, tab, or unicode empty char(8195)
+                                var wbResult = reader.ReadLine().SplitBySpace();
+                                results.Add(new SentenceAndWBResult
+                                {
+                                    Content = wbResult.ConcatToString(),
+                                    WBResult = wbResult
+                                });
+                            }
+                            else
+                            {
+                                throw new Exception(inputFilePath + " format is wrong!");
+                            }
                         }
                         else
                         {
-                            throw new Exception(inputFilePath + " format is wrong!");
-                        }
-                    }
-                    else
-                    {
-                        wordBreaker = new WordBreaker(LocalConfig.Instance);
-                        var wbResult = wordBreaker.BreakWords(caseLine);
+                            wordBreaker = new WordBreaker(LocalConfig.Instance);
+                            var wbResult = wordBreaker.BreakWords(caseLine);
 
-                        results.Add(new SentenceAndWbResult
-                        {
-                            Content = wbResult.ConcatToString(),
-                            WbResult = wbResult
-                        });
+                            results.Add(new SentenceAndWBResult
+                            {
+                                Content = wbResult.ConcatToString(),
+                                WBResult = wbResult
+                            });
+                        }
                     }
                 }
             }
-
-            if (wordBreaker != null)
+            finally
             {
-                wordBreaker.Dispose();
+                if (wordBreaker != null)
+                {
+                    wordBreaker.Dispose();
+                }
             }
 
             return results;
         }
 
         /// <summary>
-        /// Get case and pron from bug fixing file
+        /// Get case and pron from bug fixing file.
         /// </summary>
-        /// <param name="inputFilePath">bug fixing file path
+        /// <param name="inputFilePath">Bug fixing file path
         /// file format is like below
         /// 我还差你五元钱。	ch a_h a_l
-        /// 我们离父母的希望还差很远。	ch a_h a_l
+        /// 我们离父母的希望还差很远。	ch a_h a_l.
         /// </param>
-        /// <param name="hasWbResult"></param>
-        /// <returns></returns>
+        /// <returns>Dictionary contains case and pronunciation.</returns>
         public static Dictionary<string, string> GetSenAndPronFromBugFixingFile(string inputFilePath)
         {
             Dictionary<string, string> senAndProns = new Dictionary<string, string>();
 
             WordBreaker wordBreaker = new WordBreaker(LocalConfig.Instance);
 
-            using (StreamReader reader = new StreamReader(inputFilePath))
+            try
             {
-                int lineNumber = 1;
-
-                while (reader.Peek() > -1)
+                using (StreamReader reader = new StreamReader(inputFilePath))
                 {
-                    string line = reader.ReadLine();
-                    if (!string.IsNullOrEmpty(line))
+                    int lineNumber = 1;
+
+                    while (reader.Peek() > -1)
                     {
-                        string[] caseAndPron = line.Trim().Split(new char[] { '\t' });
-
-                        if (caseAndPron.Length != 2)
+                        string line = reader.ReadLine();
+                        if (!string.IsNullOrEmpty(line))
                         {
-                            throw new Exception(string.Format("{0} file at line {1} has the wrong format!", inputFilePath, lineNumber));
+                            string[] caseAndPron = line.Trim().Split(new char[] { '\t' });
+
+                            if (caseAndPron.Length != 2)
+                            {
+                                throw new Exception(Helper.NeutralFormat("{0} file at line {1} has the wrong format!", inputFilePath, lineNumber));
+                            }
+
+                            string sentence = caseAndPron[0];
+
+                            if (string.IsNullOrEmpty(sentence))
+                            {
+                                throw new Exception(Helper.NeutralFormat("{0} file at line {1} has the empty sentence!", inputFilePath, lineNumber));
+                            }
+
+                            if (sentence.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, wordBreaker) == -1)
+                            {
+                                throw new Exception(Helper.NeutralFormat("{0} file at line {1} has the wrong sentence!", inputFilePath, lineNumber));
+                            }
+
+                            sentence = sentence.Trim();
+
+                            string pinYinPron = caseAndPron[1];
+
+                            if (LocalConfig.Instance.Prons.ContainsKey(pinYinPron) &&
+                                !string.IsNullOrEmpty(LocalConfig.Instance.Prons[pinYinPron]))
+                            {
+                                senAndProns.Add(sentence, LocalConfig.Instance.Prons[pinYinPron]);
+                            }
+                            else
+                            {
+                                throw new Exception(Helper.NeutralFormat("{0} file at line {1} has the wrong pronunciation!", inputFilePath, lineNumber));
+                            }
                         }
-
-                        string sentence = caseAndPron[0];
-
-                        if (string.IsNullOrEmpty(sentence))
-                        {
-                            throw new Exception(string.Format("{0} file at line {1} has the empty sentence!", inputFilePath, lineNumber));
-                        }
-
-                        if (sentence.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, wordBreaker) == -1)
-                        {
-                            throw new Exception(string.Format("{0} file at line {1} has the wrong sentence!", inputFilePath, lineNumber));
-                        }
-
-                        sentence = sentence.Trim();
-
-                        string pinYinPron = caseAndPron[1];
-
-                        if ((LocalConfig.Instance.Prons.ContainsKey(pinYinPron) &&
-                            !string.IsNullOrEmpty(LocalConfig.Instance.Prons[pinYinPron])))
-                        {
-                            senAndProns.Add(sentence, LocalConfig.Instance.Prons[pinYinPron]);
-                        }
-                        else
-                        {
-                            throw new Exception(string.Format("{0} file at line {1} has the wrong pronunciation!", inputFilePath, lineNumber));
-                        }
+                        ++lineNumber;
                     }
-                    ++lineNumber;
                 }
             }
+            finally
+            {
 
-            wordBreaker.Dispose();
+                wordBreaker.Dispose();
+            }
+
 
             return senAndProns;
         }

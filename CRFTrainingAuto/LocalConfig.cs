@@ -1,14 +1,24 @@
-﻿namespace CRFTrainingAuto
+﻿//-----------------------------------------------------------------------------------------
+// <copyright file="LocalConfig.cs" company="Microsoft">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
+// </copyright>
+//
+// <summary>
+//     Configuration class
+// </summary>
+//-----------------------------------------------------------------------------------------
+namespace CRFTrainingAuto
 {
-    using Microsoft.Tts.Offline;
-    using Microsoft.Tts.Offline.Common;
-    using Microsoft.Tts.Offline.Utility;
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Reflection;
     using System.Xml;
     using System.Xml.Schema;
+    using Microsoft.Tts.Offline;
+    using Microsoft.Tts.Offline.Common;
+    using Microsoft.Tts.Offline.Utility;
+
     public class LocalConfig : XmlDataFile
     {
         #region Static fields
@@ -17,14 +27,18 @@
         private static object _locker = new object();
 
         #endregion
+
         #region Fields
 
         // target\distrib\debug\{amd64/x86}\dev\TTS\Server\bin\Offline
         private string OfflineToolPathPattern = @"target\distrib\debug\{0}\dev\TTS\Server\bin\Offline";
+        
         // private\dev\speech\tts\shenzhou\data\zh-CN\Language\Model.Rule\PolyphonyModel\ModelUsed
         private string CRFModelDirPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Language\Model.Rule\PolyphonyModel\ModelUsed";
+        
         // private\dev\speech\tts\shenzhou\src\lochand\ZhCN\MSTTSLocZhCN.dat
         private string LangDataPathPattern = @"private\dev\speech\tts\shenzhou\src\lochand\{0}\MSTTSLoc{0}.dat";
+        
         // private\dev\speech\tts\shenzhou\data\zh-CN\Language\Model.Rule\Polyphony\polyrule.txt
         private string PolyRuleFilePathPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Language\Model.Rule\Polyphony\polyrule.txt";
 
@@ -48,23 +62,38 @@
         private string _trainingConfigTemplate;
         private string _featuresConfigTemplate;
         private int _showTipCount;
-        private static XmlSchema _schema;
+        private XmlSchema _schema;
         #endregion
 
         #region Constructor
 
         /// <summary>
-        /// Initializes a new instance of the LocalConfig class
+        /// Initializes a new instance of the LocalConfig class.
         /// </summary>
-        /// <param name="configPath">xml config file path</param>
-        private LocalConfig(string configFilePath)
+        /// <param name="configPath">xml config file path.</param>
+        private LocalConfig(string configPath)
         {
-            base.Load(configFilePath);
+            base.Load(configPath);
         }
 
         #endregion
 
         #region Properties
+        /// <summary>
+        /// Gets LocalConfig instance.
+        /// </summary>
+        public static LocalConfig Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    throw new InvalidOperationException("Object not created");
+                }
+
+                return _instance;
+            }
+        }
 
         /// <summary>
         /// Gets corpusCleanerConfig schema.
@@ -73,238 +102,240 @@
         {
             get
             {
-                if (_schema == null)
+                if (this._schema == null)
                 {
                     Assembly assembly = Assembly.GetExecutingAssembly();
-                    _schema = Microsoft.Tts.Offline.Utility.XmlHelper.LoadSchemaFromResource(assembly,
+                    this._schema = XmlHelper.LoadSchemaFromResource(
+                        assembly,
                         "CRFTrainingAuto.CRFTrainingAutoConfig.xsd");
                 }
 
-                return _schema;
+                return this._schema;
             }
         }
 
         /// <summary>
-        /// The char to be trained
+        /// Gets the char to be trained.
         /// </summary>
         public string CharName
         {
             get
             {
-                return _charName;
+                return this._charName;
             }
         }
 
         /// <summary>
-        /// Using info in CRF mapping file, "Bing Used", or "Unused"
+        /// Gets Using info in CRF mapping file, "Bing Used", or "Unused".
         /// </summary>
         public string UsingInfo
         {
             get
             {
-                return _usingInfo;
+                return this._usingInfo;
             }
         }
 
         /// <summary>
-        /// Current Language
+        /// Gets Current Language.
         /// </summary>
         public Language Lang
         {
             get
             {
-                return _lang;
+                return this._lang;
             }
         }
 
         /// <summary>
-        /// The char to be trained
+        /// Gets the char to be trained.
         /// </summary>
         public string OutputCRFName
         {
             get
             {
-                return _outputCRFName;
+                return this._outputCRFName;
             }
         }
 
         /// <summary>
-        /// Used crf model folder
+        /// Gets crf model folder.
         /// </summary>
         public string CRFModelDir
         {
             get
             {
-                return _crfModelDir;
+                return this._crfModelDir;
             }
         }
 
         /// <summary>
-        /// Default pron for word has no pron
+        /// Gets default pron for word has no pron.
         /// </summary>
         public string DefaultWordPron
         {
             get
             {
-                return _defaultWordPron;
+                return this._defaultWordPron;
             }
         }
 
         /// <summary>
-        /// Filtered case min length
+        /// Gets filtered case min length.
         /// </summary>
         public int MinCaseLength
         {
             get
             {
-                return _minCaseLength;
+                return this._minCaseLength;
             }
         }
 
         /// <summary>
-        /// Max case count used to train crf model
+        /// Gets max case count used to train crf model.
         /// </summary>
         public int MaxCaseCount
         {
             get
             {
-                return _maxCaseCount;
+                return this._maxCaseCount;
             }
         }
 
         /// <summary>
-        /// Case count using N Cross
+        /// Gets case count using N Cross.
         /// </summary>
         public int NCrossCaseCount
         {
             get
             {
-                return _nCrossCaseCount;
+                return this._nCrossCaseCount;
             }
         }
 
         /// <summary>
-        /// Folder count using N Cross
+        /// Gets folder count using N Cross.
         /// </summary>
         public int NFolderCount
         {
             get
             {
-                return _nFolderCount;
+                return this._nFolderCount;
             }
         }
 
         /// <summary>
-        /// Word prons contains pinyin and native phone
+        /// Gets word prons contains pinyin and native phone.
         /// </summary>
         public Dictionary<string, string> Prons
         {
             get
             {
-                return _prons;
+                return this._prons;
             }
         }
 
         /// <summary>
-        /// Brach root path
+        /// Gets brach root path.
         /// </summary>
         public string BranchRootPath
         {
             get
             {
-                return _branchRootPath;
+                return this._branchRootPath;
             }
         }
 
         /// <summary>
-        /// Architecure, Amd64 or x86
+        /// Gets architecure, Amd64 or x86.
         /// </summary>
         public string Arch
         {
             get
             {
-                return _arch;
+                return this._arch;
             }
         }
 
         /// <summary>
-        /// Branch offline path
+        /// Gets branch offline path.
         /// </summary>
         public string OfflineToolPath
         {
             get
             {
-                return _offlineToolPath;
+                return this._offlineToolPath;
             }
         }
 
         /// <summary>
-        /// Language data path
+        /// Gets language data path.
         /// </summary>
         public string LangDataPath
         {
             get
             {
-                return _langDataPath;
+                return this._langDataPath;
             }
         }
 
         /// <summary>
-        /// polyrule.txt file path
+        /// Gets polyrule.txt file path.
         /// </summary>
         public string PolyRuleFilePath
         {
             get
             {
-                return _polyRuleFilePath;
+                return this._polyRuleFilePath;
             }
         }
 
         /// <summary>
-        /// Max thread count when filtering char from corpus
+        /// Gets max thread count when filtering char from corpus.
         /// </summary>
         public int MaxThreadCount
         {
             get
             {
-                return _maxThreadCount;
+                return this._maxThreadCount;
             }
         }
 
         /// <summary>
-        /// Training CRF model config template
+        /// Gets training CRF model config template.
         /// </summary>
         public string TrainingConfigTemplate
         {
             get
             {
-                return _trainingConfigTemplate;
+                return this._trainingConfigTemplate;
             }
         }
 
         /// <summary>
-        /// Training CRF model feature config template
+        /// Gets training CRF model feature config template.
         /// </summary>
         public string FeaturesConfigTemplate
         {
             get
             {
-                return _featuresConfigTemplate;
+                return this._featuresConfigTemplate;
             }
         }
 
         /// <summary>
-        /// Used to show pogress when filtering char
+        /// Gets or sets show pogress count when filtering char.
         /// </summary>
         public int ShowTipCount
         {
             get
             {
-                return _showTipCount;
+                return this._showTipCount;
             }
+
             set
             {
-                _showTipCount = value;
+                this._showTipCount = value;
             }
         }
         #endregion
@@ -312,215 +343,9 @@
         #region Methods
 
         /// <summary>
-        /// Load XML file.
+        /// Init _instance when _instance is null, support multithread Singleton.
         /// </summary>
-        /// <param name="xmlDoc">XmlDoc.</param>
-        /// <param name="nsmgr">Nsmgr.</param>
-        /// <param name="contentController">Content controler.</param>
-        protected override void Load(XmlDocument xmlDoc, XmlNamespaceManager nsmgr, object contentController)
-        {
-            XmlNode node;
-
-            #region init fields
-            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/@name", nsmgr);
-            if (node != null)
-            {
-                _charName = node.Value;
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:Language", nsmgr);
-            if (node != null)
-            {
-                _lang = Localor.StringToLanguage(node.InnerText);
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:OutputCRFName", nsmgr);
-            if (node != null)
-            {
-                _outputCRFName = node.InnerText;
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:Enabled", nsmgr);
-            if (node != null)
-            {
-                switch (node.InnerText)
-                {
-                    case "0":
-                        _usingInfo = "Unused";
-                        break;
-                    case "1":
-                        _usingInfo = "Being_used";
-                        break;
-                    default:
-                        throw new Exception("Enabled value can only be 1 or 0!");
-                }
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:DefaultWordPron", nsmgr);
-            if (node != null)
-            {
-                _defaultWordPron = node.InnerText;
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:MinCaseLength", nsmgr);
-            if (node != null)
-            {
-                try
-                {
-                    _minCaseLength = Int32.Parse(node.InnerText);
-                }
-                catch
-                {
-                    throw new FormatException("MinCaseLength is not a number!");
-                }
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:MaxCaseCount", nsmgr);
-            if (node != null)
-            {
-                try
-                {
-                    _maxCaseCount = Int32.Parse(node.InnerText);
-                }
-                catch
-                {
-                    throw new FormatException("MaxCaseCount is not a number!");
-                }
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:NCrossCaseCount", nsmgr);
-            if (node != null)
-            {
-                try
-                {
-                    _nCrossCaseCount = Int32.Parse(node.InnerText);
-                }
-                catch
-                {
-                    throw new FormatException("NCrossCaseCount is not a number!");
-                }
-            }
-
-            if (_maxCaseCount <= _nCrossCaseCount)
-            {
-                throw new Exception("MaxCaseCount must greaterr than NCrossCaseCount!");
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:NFolderCount", nsmgr);
-            if (node != null)
-            {
-                try
-                {
-                    _nFolderCount = Int32.Parse(node.InnerText);
-                }
-                catch
-                {
-                    throw new FormatException("NFolderCount is not a number!");
-                }
-            }
-
-            var prons = xmlDoc.SelectNodes("//tts:Prons/tts:Pron", nsmgr);
-            if (prons != null && prons.Count > 0)
-            {
-                foreach (XmlNode item in prons)
-                {
-                    try
-                    {
-                        string pinyin = item.Attributes["pinyin"].Value;
-                        if (!string.IsNullOrEmpty(pinyin) &&
-                            !_prons.ContainsKey(pinyin))
-                        {
-                            _prons.Add(pinyin, item.InnerText);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        throw new FormatException(ex.Message);
-                    }
-                }
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:Paths/tts:BranchRootPath", nsmgr);
-            if (node != null)
-            {
-                _branchRootPath = node.InnerText;
-                if (!Directory.Exists(_branchRootPath))
-                {
-                    throw Helper.CreateException(typeof(DirectoryNotFoundException), _branchRootPath);
-                }
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:Paths/tts:Arch", nsmgr);
-            if (node != null)
-            {
-                _arch = node.InnerText;
-
-                _offlineToolPath = Path.Combine(_branchRootPath, string.Format(OfflineToolPathPattern, _arch));
-                Helper.ThrowIfDirectoryNotExist(_offlineToolPath);
-
-                _crfModelDir = Path.Combine(_branchRootPath, string.Format(CRFModelDirPattern, Localor.LanguageToString(_lang)));
-                Helper.ThrowIfDirectoryNotExist(_crfModelDir);
-
-                _langDataPath = Path.Combine(_branchRootPath, string.Format(LangDataPathPattern, Localor.LanguageToString(_lang).Replace("-", "")));
-                Helper.ThrowIfFileNotExist(_langDataPath);
-                
-                _polyRuleFilePath = Path.Combine(_branchRootPath, string.Format(PolyRuleFilePathPattern, Localor.LanguageToString(_lang)));
-                Helper.ThrowIfFileNotExist(_polyRuleFilePath);
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:MaxThreadCount", nsmgr);
-            if (node != null)
-            {
-                try
-                {
-                    _maxThreadCount = Int32.Parse(node.InnerText);
-                }
-                catch
-                {
-                    throw new FormatException("MaxThreadCount is not a number!");
-                }
-
-                if (_maxThreadCount <= 0)
-                {
-                    _maxThreadCount = 1;
-                }
-            }
-
-            node = node = xmlDoc.SelectSingleNode("//tts:TrainingConfigTemplate/tts:Training", nsmgr);
-            if (node != null)
-            {
-                _trainingConfigTemplate = node.InnerText;
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:TrainingConfigTemplate/tts:Features", nsmgr);
-            if (node != null)
-            {
-                _featuresConfigTemplate = node.InnerText;
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:ShowTipCount", nsmgr);
-            if (node != null)
-            {
-                try
-                {
-                    _showTipCount = Int32.Parse(node.InnerText);
-                }
-                catch
-                {
-                    throw new FormatException("ShowTipCount is not a number!");
-                }
-
-                if (_showTipCount < 0)
-                {
-                    _showTipCount = 0;
-                }
-            }
-            #endregion
-        }
-        /// <summary>
-        /// Init _instance when _instance is null, support multithread Singleton
-        /// </summary>
-        /// <param name="configFilePath">xml config file path</param>
+        /// <param name="configFilePath">xml config file path.</param>
         public static void Create(string configFilePath)
         {
             if (_instance == null)
@@ -540,20 +365,211 @@
         }
 
         /// <summary>
-        /// LocalConfig instance
+        /// Load XML file.
         /// </summary>
-        public static LocalConfig Instance
+        /// <param name="xmlDoc">XmlDoc.</param>
+        /// <param name="nsmgr">Nsmgr.</param>
+        /// <param name="contentController">Content controler.</param>
+        protected override void Load(XmlDocument xmlDoc, XmlNamespaceManager nsmgr, object contentController)
         {
-            get
+            XmlNode node;
+
+            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/@name", nsmgr);
+            if (node != null)
             {
-                if (_instance == null)
+                this._charName = node.Value;
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:Language", nsmgr);
+            if (node != null)
+            {
+                this._lang = Localor.StringToLanguage(node.InnerText);
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:OutputCRFName", nsmgr);
+            if (node != null)
+            {
+                this._outputCRFName = node.InnerText;
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:Enabled", nsmgr);
+            if (node != null)
+            {
+                switch (node.InnerText)
                 {
-                    throw new Exception("Object not created");
+                    case "0":
+                        this._usingInfo = "Unused";
+                        break;
+                    case "1":
+                        this._usingInfo = "Being_used";
+                        break;
+                    default:
+                        throw new Exception("Enabled value can only be 1 or 0!");
+                }
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:DefaultWordPron", nsmgr);
+            if (node != null)
+            {
+                this._defaultWordPron = node.InnerText;
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:MinCaseLength", nsmgr);
+            if (node != null)
+            {
+                try
+                {
+                    this._minCaseLength = int.Parse(node.InnerText);
+                }
+                catch
+                {
+                    throw new FormatException("MinCaseLength is not a number!");
+                }
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:MaxCaseCount", nsmgr);
+            if (node != null)
+            {
+                try
+                {
+                    this._maxCaseCount = int.Parse(node.InnerText);
+                }
+                catch
+                {
+                    throw new FormatException("MaxCaseCount is not a number!");
+                }
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:NCrossCaseCount", nsmgr);
+            if (node != null)
+            {
+                try
+                {
+                    this._nCrossCaseCount = int.Parse(node.InnerText);
+                }
+                catch
+                {
+                    throw new FormatException("NCrossCaseCount is not a number!");
+                }
+            }
+
+            if (this._maxCaseCount <= this._nCrossCaseCount)
+            {
+                throw new Exception("MaxCaseCount must greaterr than NCrossCaseCount!");
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:NFolderCount", nsmgr);
+            if (node != null)
+            {
+                try
+                {
+                    this._nFolderCount = int.Parse(node.InnerText);
+                }
+                catch
+                {
+                    throw new FormatException("NFolderCount is not a number!");
+                }
+            }
+
+            var prons = xmlDoc.SelectNodes("//tts:Prons/tts:Pron", nsmgr);
+            if (prons != null && prons.Count > 0)
+            {
+                foreach (XmlNode item in prons)
+                {
+                    try
+                    {
+                        string pinyin = item.Attributes["pinyin"].Value;
+                        if (!string.IsNullOrEmpty(pinyin) &&
+                            !this._prons.ContainsKey(pinyin))
+                        {
+                            this._prons.Add(pinyin, item.InnerText);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        throw new FormatException(ex.Message);
+                    }
+                }
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:Paths/tts:BranchRootPath", nsmgr);
+            if (node != null)
+            {
+                this._branchRootPath = node.InnerText;
+
+                if (!Directory.Exists(this._branchRootPath))
+                {
+                    throw Helper.CreateException(typeof(DirectoryNotFoundException), this._branchRootPath);
+                }
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:Paths/tts:Arch", nsmgr);
+            if (node != null)
+            {
+                this._arch = node.InnerText;
+
+                this._offlineToolPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this.OfflineToolPathPattern, this._arch));
+                Helper.ThrowIfDirectoryNotExist(this._offlineToolPath);
+
+                this._crfModelDir = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this.CRFModelDirPattern, Localor.LanguageToString(this._lang)));
+                Helper.ThrowIfDirectoryNotExist(this._crfModelDir);
+
+                this._langDataPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this.LangDataPathPattern, Localor.LanguageToString(this._lang).Replace("-", string.Empty)));
+                Helper.ThrowIfFileNotExist(this._langDataPath);
+
+                this._polyRuleFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this.PolyRuleFilePathPattern, Localor.LanguageToString(this._lang)));
+                Helper.ThrowIfFileNotExist(this._polyRuleFilePath);
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:MaxThreadCount", nsmgr);
+            if (node != null)
+            {
+                try
+                {
+                    this._maxThreadCount = int.Parse(node.InnerText);
+                }
+                catch
+                {
+                    throw new FormatException("MaxThreadCount is not a number!");
                 }
 
-                return _instance;
+                if (this._maxThreadCount <= 0)
+                {
+                    this._maxThreadCount = 1;
+                }
+            }
+
+            node = node = xmlDoc.SelectSingleNode("//tts:TrainingConfigTemplate/tts:Training", nsmgr);
+            if (node != null)
+            {
+                this._trainingConfigTemplate = node.InnerText;
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:TrainingConfigTemplate/tts:Features", nsmgr);
+            if (node != null)
+            {
+                this._featuresConfigTemplate = node.InnerText;
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:ShowTipCount", nsmgr);
+            if (node != null)
+            {
+                try
+                {
+                    this._showTipCount = int.Parse(node.InnerText);
+                }
+                catch
+                {
+                    throw new FormatException("ShowTipCount is not a number!");
+                }
+
+                if (this._showTipCount < 0)
+                {
+                    this._showTipCount = 0;
+                }
             }
         }
+
         #endregion
     }
 }

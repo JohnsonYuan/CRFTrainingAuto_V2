@@ -1,18 +1,27 @@
-﻿namespace CRFTrainingAuto
+﻿//----------------------------------------------------------------------------
+// <copyright file="ScriptGenerator.cs" company="MICROSOFT">
+//      Copyright (c) Microsoft Corporation.  All rights reserved.
+// </copyright>
+//
+// <summary>
+//      Generate training or test script
+// </summary>
+//----------------------------------------------------------------------------
+
+namespace CRFTrainingAuto
 {
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
     using System.Xml;
-    using Excel = Microsoft.Office.Interop.Excel;
     using Microsoft.Tts.Offline;
-    using Microsoft.Tts.Offline.Utility;
-    using System.Text.RegularExpressions;
-    using System.Threading.Tasks;
-    using System.Collections.ObjectModel;
+    using Excel = Microsoft.Office.Interop.Excel;
     using SP = Microsoft.Tts.ServiceProvider;
 
+    /// <summary>
+    /// Generate action.
+    /// </summary>
     public enum GenerateAction
     {
         TestCase,
@@ -22,13 +31,13 @@
     public class ScriptGenerator
     {
         /// <summary>
-        /// Generate training script or test case
+        /// Generate training script or test case.
         /// </summary>
-        /// <param name="excelFilePath">excel file path</param>
-        /// <param name="action">generate training or test script</param>
-        /// <param name="outputDir">output folder</param>
-        /// <param name="outputFileName">if not supply, TrainingFileName(training.xml) for training script, TestCaseFileName(testing.xml) for test case</param>
-        /// <param name="startIndex">training script start index, it could be an path or a number</param>
+        /// <param name="excelFilePath">excel file path.</param>
+        /// <param name="action">generate training or test script.</param>
+        /// <param name="outputDir">output folder.</param>
+        /// <param name="outputFileName">if not supply, TrainingFileName(training.xml) for training script, TestCaseFileName(testing.xml) for test case.</param>
+        /// <param name="startIndex">training script start index, it could be an path or a number.</param>
         public static void GenScript(string excelFilePath, GenerateAction action, string outputDir, string outputFileName = null, string startIndex = "")
         {
             // initialize the Excel application Object
@@ -41,8 +50,8 @@
                 return;
             }
 
-            Excel.Workbook xlWorkBook = xlApp.Workbooks.Open(excelFilePath, 0, false, 5, "", "", false, Excel.XlPlatform.xlWindows, "",
-                        true, false, 0, true, false, false);
+            Excel.Workbook xlWorkBook = xlApp.Workbooks.Open(excelFilePath, 0, false, 5, string.Empty, string.Empty, false, Excel.XlPlatform.xlWindows, string.Empty, true, false, 0, true, false, false);
+
             object misValue = System.Reflection.Missing.Value;
 
             Excel.Worksheet xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
@@ -53,18 +62,20 @@
                 if (ExcelHelper.VerifyExcelSheet(xlWorkSheet))
                 {
                     // load cases and prons
-                    Dictionary<SentenceAndWbResult, string> caseAndProns = ExcelHelper.GetCaseAndPronsFromExcel(range);
+                    Dictionary<SentenceAndWBResult, string> caseAndProns = ExcelHelper.GetCaseAndPronsFromExcel(range);
                     string outputFilePath;
                     switch (action)
                     {
                         case GenerateAction.TestCase:
                             Util.ConsoleOutTextColor("Generate test cases for " + excelFilePath);
+                            
                             // Generate FM Test Cases, if not supply file name, using TestCaseFileName as default name
                             outputFilePath = Path.Combine(outputDir, outputFileName ?? Util.TestCaseFileName);
 
                             GenRuntimeTestcase(caseAndProns, outputFilePath);
                             break;
                         case GenerateAction.TrainingScript:
+                            
                             // Generate training script, if not supply file name, using TrainingFileName as default name
                             Util.ConsoleOutTextColor("Generating training script for " + excelFilePath);
                             outputFilePath = Path.Combine(outputDir, outputFileName ?? Util.TrainingFileName);
@@ -92,6 +103,7 @@
                 {
                     xlWorkBook.Close(true, misValue, misValue);
                 }
+
                 if (xlApp != null)
                 {
                     xlApp.Quit();
@@ -104,7 +116,7 @@
         }
 
         /// <summary>
-        /// Generate test case file
+        /// Generate test case file.
         /// </summary>
         /// <example>
         /// <cases lang="zh-CN" component="Pronunciation" xmlns="http://schemas.microsoft.com/tts">
@@ -122,9 +134,9 @@
         ///   </case>
         /// </cases>
         /// </example>
-        /// <param name="caseAndPronsWithWb">dictionary contains case and pron and word break result</param>
-        /// <param name="outputFilePath">output xml file path</param>
-        public static void GenRuntimeTestcase(Dictionary<SentenceAndWbResult, string> caseAndPronsWithWb, string outputFilePath)
+        /// <param name="caseAndPronsWithWb">dictionary contains case and pron and word break result.</param>
+        /// <param name="outputFilePath">output xml file path.</param>
+        public static void GenRuntimeTestcase(Dictionary<SentenceAndWBResult, string> caseAndPronsWithWb, string outputFilePath)
         {
             XmlWriterSettings settings = new XmlWriterSettings
             {
@@ -141,7 +153,7 @@
 
                 string charName = LocalConfig.Instance.CharName;
 
-                foreach (SentenceAndWbResult caseAndWb in caseAndPronsWithWb.Keys)
+                foreach (SentenceAndWBResult caseAndWb in caseAndPronsWithWb.Keys)
                 {
                     xtw.WriteStartElement("case");
                     xtw.WriteAttributeString("priority", "P1");
@@ -149,13 +161,15 @@
                     xtw.WriteAttributeString("pron_polyword", LocalConfig.Instance.CharName);
 
                     string testCase = caseAndWb.Content;
+
                     // the content might have more than one target char
                     // e.g. index start from 1 <case priority='P1' category='polyphone' pron_polyword='还' index='2'>
                     int tempIndex = testCase.IndexOf(charName);
+
                     // make sure this case has more than one char
                     if (tempIndex > -1 && testCase.IndexOf(charName, tempIndex + 1) > -1)
                     {
-                        int charIndex = testCase.GetSingleCharIndexOfLine(charName, caseAndWb.WbResult);
+                        int charIndex = testCase.GetSingleCharIndexOfLine(charName, caseAndWb.WBResult);
 
                         // if cannot find the single char index, skip this case
                         if (charIndex == -1)
@@ -184,6 +198,7 @@
 
                     xtw.WriteEndElement();
                 }
+
                 xtw.WriteEndElement();
                 xtw.WriteEndDocument();
             }
@@ -195,23 +210,24 @@
         }
 
         /// <summary>
-        /// Generate test case file
+        /// Generate test case file.
         /// </summary>
-        /// <param name="caseAndProns">dictionary contains case and pron</param>
-        /// <param name="outputFilePath">output xml file path</param>
+        /// <param name="caseAndProns">dictionary contains case and pron.</param>
+        /// <param name="outputFilePath">output xml file path.</param>
         public static void GenRuntimeTestcase(Dictionary<string, string> caseAndProns, string outputFilePath)
         {
-            Dictionary<SentenceAndWbResult, string> caseAndPronsWithWb = new Dictionary<SentenceAndWbResult, string>();
+            Dictionary<SentenceAndWBResult, string> caseAndPronsWithWb = new Dictionary<SentenceAndWBResult, string>();
 
-            SentenceAndWbResult tempResult;
+            SentenceAndWBResult tempResult;
 
             using (WordBreaker wordBreaker = new WordBreaker(LocalConfig.Instance))
             {
                 foreach (var item in caseAndProns)
                 {
-                    tempResult = new SentenceAndWbResult {
+                    tempResult = new SentenceAndWBResult 
+                    {
                         Content = item.Key,
-                        WbResult = wordBreaker.BreakWords(item.Key)
+                        WBResult = wordBreaker.BreakWords(item.Key)
                     };
 
                     caseAndPronsWithWb.Add(tempResult, item.Value);
@@ -222,7 +238,7 @@
         }
 
         /// <summary>
-        /// Generate training scirpt, if specify the existing script, output file's start index continue with existing script file
+        /// Generate training scirpt, if specify the existing script, output file's start index continue with existing script file.
         /// </summary>
         /// <example>
         /// <script language="zh-CN" xmlns="http://schemas.microsoft.com/tts">
@@ -241,10 +257,9 @@
         ///   </si>
         /// </script>
         /// </example>
-        /// <param name="caseAndProns">dictionary contains case and pron</param>
-        /// <param name="outputFilePath">output xml file path</param>
-        /// <param name="existingScriptPath">existing script file path</param>
-        /// <param name="startIndexOrFilePath">if it is number, then the start index plus 1, if it as an script file path, the start index will be the last item in the script plus 1</param>
+        /// <param name="caseAndProns">dictionary contains case and pron.</param>
+        /// <param name="outputFilePath">output xml file path.</param>
+        /// <param name="startIndexOrFilePath">if it is number, then the start index plus 1, if it as an script file path, the start index will be the last item in the script plus 1.</param>
         public static void GenTrainingScript(Dictionary<string, string> caseAndProns, string outputFilePath, string startIndexOrFilePath = "")
         {
             int startId = 1;
@@ -290,7 +305,7 @@
                 {
                     charWord.Pronunciation = caseAndPron.Value;
 
-                    item.Id = string.Format("{0:D10}", startId);
+                    item.Id = Microsoft.Tts.Offline.Utility.Helper.NeutralFormat("{0:D10}", startId);
 
                     // make sure each word contains pron, if not, use the default pron
                     foreach (ScriptWord word in item.AllWords)
@@ -311,7 +326,8 @@
             result.Save(outputFilePath, System.Text.Encoding.Unicode);
 
             // genereate a txt file with same name for clear look
-            File.WriteAllLines(Util.ChangeFileExtension(outputFilePath, Util.TxtFileExtension),
+            File.WriteAllLines(
+                               Util.ChangeFileExtension(outputFilePath, Util.TxtFileExtension),
                                caseAndProns.Keys);
 
             Console.WriteLine("Generate training script " + outputFilePath);
@@ -321,7 +337,6 @@
         /// Generate script item from raw text(only generate to word level).
         /// </summary>
         /// <param name="text">Plain text.</param>
-        /// <param name="wbResult">Word break result</param>
         /// <returns>ScriptItem.</returns>
         public static ScriptItem GenerateScriptItem(string text)
         {

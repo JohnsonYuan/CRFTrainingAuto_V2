@@ -1,10 +1,19 @@
-﻿namespace CRFTrainingAuto
+﻿//----------------------------------------------------------------------------
+// <copyright file="ExcelHelper.cs" company="MICROSOFT">
+//      Copyright (c) Microsoft Corporation.  All rights reserved.
+// </copyright>
+//
+// <summary>
+//      Excel helper
+// </summary>
+//----------------------------------------------------------------------------
+namespace CRFTrainingAuto
 {
-    using Microsoft.Tts.Offline.Utility;
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using Microsoft.Tts.Offline.Utility;
     using Excel = Microsoft.Office.Interop.Excel;
 
     public static class ExcelHelper
@@ -15,81 +24,86 @@
         /// <param name="usedRange">Excel used range</param>
         /// <param name="useNavtivePhone">if true, the return value's pron is native pron, else use pinyin</param>
         /// <returns>Dictionary contains case and native pron</returns>
-        public static Dictionary<SentenceAndWbResult, string> GetCaseAndPronsFromExcel(Excel.Range usedRange, bool useNavtivePhone = true)
+        public static Dictionary<SentenceAndWBResult, string> GetCaseAndPronsFromExcel(Excel.Range usedRange, bool useNavtivePhone = true)
         {
-            Dictionary<SentenceAndWbResult, string> caseAndProns = new Dictionary<SentenceAndWbResult, string>();
+            Dictionary<SentenceAndWBResult, string> caseAndProns = new Dictionary<SentenceAndWBResult, string>();
 
-            WordBreaker breaker = null;
-
-            for (int rCnt = 2; rCnt <= usedRange.Rows.Count; rCnt++)
+            WordBreaker wordBreaker = null;
+            try
             {
-                SentenceAndWbResult tempReseult = new SentenceAndWbResult();
+                for (int rCnt = 2; rCnt <= usedRange.Rows.Count; rCnt++)
+                {
+                    SentenceAndWBResult tempReseult = new SentenceAndWBResult();
 
-                // first column for case, second column for corrct pron
-                string caseVal = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelCaseColIndex] as Excel.Range).Value2);
-                tempReseult.Content = caseVal.Replace(" ", "").Replace("\t", "");
-                string wbResult = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelWbColIndex] as Excel.Range).Value2);
-                
-                if (!string.IsNullOrEmpty(wbResult))
-                {
-                    tempReseult.WbResult = wbResult.SplitBySpace();
-                }
-                else
-                {
-                    if(breaker == null)
+                    // first column for case, second column for corrct pron
+                    string caseVal = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelCaseColIndex] as Excel.Range).Value2);
+                    tempReseult.Content = caseVal.Replace(" ", "").Replace("\t", "");
+                    string wbResult = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelWbColIndex] as Excel.Range).Value2);
+
+                    // if excel doesn't contains the word break result, create a new wrod breaker
+                    if (!string.IsNullOrEmpty(wbResult))
                     {
-                        breaker = new WordBreaker(LocalConfig.Instance);
-                    }
-
-                    tempReseult.WbResult = breaker.BreakWords(caseVal);
-                }
-                
-                string pinYinPron = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelCorrectPronColIndex] as Excel.Range).Value2);
-                if (string.IsNullOrWhiteSpace(pinYinPron))
-                {
-                    throw new Exception(string.Format("Excel in line {0} doesn't provide the pron.", rCnt));
-                }
-
-                pinYinPron = pinYinPron.Trim();
-
-                if (string.IsNullOrEmpty(caseVal) ||
-                    string.IsNullOrEmpty(pinYinPron))
-                {
-                    throw new Exception(string.Format("Excel file in row {0} has the empty case or pron!", rCnt));
-                }
-
-                if (!caseAndProns.ContainsKey(tempReseult))
-                {
-                    // check the pron is in config file
-                    if ((LocalConfig.Instance.Prons.ContainsKey(pinYinPron) &&
-                        !string.IsNullOrEmpty(LocalConfig.Instance.Prons[pinYinPron])))
-                    {
-                        // if don't use native phone, we add the pinyin pron to result
-                        if (!useNavtivePhone)
-                        {
-                            caseAndProns.Add(tempReseult, pinYinPron);
-                        }
-                        else
-                        {
-                            caseAndProns.Add(tempReseult, LocalConfig.Instance.Prons[pinYinPron]);
-                        }
+                        tempReseult.WBResult = wbResult.SplitBySpace();
                     }
                     else
                     {
-                        string errorMsg = string.Format("Excel file in row {0} has the wrong pron \"{1}\"! It should like ", rCnt, pinYinPron);
-                        foreach (string val in LocalConfig.Instance.Prons.Keys)
+                        if (wordBreaker == null)
                         {
-                            errorMsg += val + " ";
+                            wordBreaker = new WordBreaker(LocalConfig.Instance);
                         }
-                        errorMsg += ".";
-                        throw new Exception(errorMsg);
+
+                        tempReseult.WBResult = wordBreaker.BreakWords(caseVal);
+                    }
+
+                    string pinYinPron = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelCorrectPronColIndex] as Excel.Range).Value2);
+                    if (string.IsNullOrWhiteSpace(pinYinPron))
+                    {
+                        throw new Exception(Helper.NeutralFormat("Excel in line {0} doesn't provide the pron.", rCnt));
+                    }
+
+                    pinYinPron = pinYinPron.Trim();
+
+                    if (string.IsNullOrEmpty(caseVal) ||
+                        string.IsNullOrEmpty(pinYinPron))
+                    {
+                        throw new Exception(Helper.NeutralFormat("Excel file in row {0} has the empty case or pron!", rCnt));
+                    }
+
+                    if (!caseAndProns.ContainsKey(tempReseult))
+                    {
+                        // check the pron is in config file
+                        if ((LocalConfig.Instance.Prons.ContainsKey(pinYinPron) &&
+                            !string.IsNullOrEmpty(LocalConfig.Instance.Prons[pinYinPron])))
+                        {
+                            // if don't use native phone, we add the pinyin pron to result
+                            if (!useNavtivePhone)
+                            {
+                                caseAndProns.Add(tempReseult, pinYinPron);
+                            }
+                            else
+                            {
+                                caseAndProns.Add(tempReseult, LocalConfig.Instance.Prons[pinYinPron]);
+                            }
+                        }
+                        else
+                        {
+                            string errorMsg = Helper.NeutralFormat("Excel file in row {0} has the wrong pron \"{1}\"! It should like ", rCnt, pinYinPron);
+                            foreach (string val in LocalConfig.Instance.Prons.Keys)
+                            {
+                                errorMsg += val + " ";
+                            }
+                            errorMsg += ".";
+                            throw new Exception(errorMsg);
+                        }
                     }
                 }
             }
-
-            if(breaker != null)
+            finally
             {
-                breaker.Dispose();
+                if (wordBreaker != null)
+                {
+                    wordBreaker.Dispose();
+                }
             }
 
             return caseAndProns;
@@ -101,7 +115,7 @@
         /// </summary>
         /// <param name="caseAndProns">case and pron</param>
         /// <param name="outputFilePath">output file path</param>
-        public static void GenExcelFromCaseAndProns(IEnumerable<KeyValuePair<SentenceAndWbResult, string>> caseAndProns, string outputFilePath)
+        public static void GenExcelFromCaseAndProns(IEnumerable<KeyValuePair<SentenceAndWBResult, string>> caseAndProns, string outputFilePath)
         {
             if (File.Exists(outputFilePath))
             {
@@ -135,19 +149,19 @@
 
                 int rowIndex = 2;
 
-                foreach (KeyValuePair<SentenceAndWbResult, string> item in caseAndProns)
+                foreach (KeyValuePair<SentenceAndWBResult, string> item in caseAndProns)
                 {
                     xlWorkSheet.Cells[rowIndex, Util.ExcelCaseColIndex] = item.Key.Content;
                     xlWorkSheet.Cells[rowIndex, Util.ExcelCorrectPronColIndex] = item.Value;
 
                     Excel.Range xlRange = (Excel.Range)xlWorkSheet.Cells[rowIndex, 1];
-                    int startIndex = item.Key.Content.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, item.Key.WbResult);
+                    int startIndex = item.Key.Content.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, item.Key.WBResult);
                     if (startIndex > -1)
                     {
                         xlRange.Characters[startIndex + 1, 1].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
                     }
 
-                    xlWorkSheet.Cells[rowIndex, Util.ExcelWbColIndex] = item.Key.WbResult.SpaceSeparate();
+                    xlWorkSheet.Cells[rowIndex, Util.ExcelWbColIndex] = item.Key.WBResult.SpaceSeparate();
 
                     ++rowIndex;
                 }
@@ -246,29 +260,29 @@
 
             Excel.Worksheet xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
 
-            Dictionary<SentenceAndWbResult, string> caseAndProns = GetCaseAndPronsFromExcel(xlWorkSheet.UsedRange, false);
+            Dictionary<SentenceAndWBResult, string> caseAndProns = GetCaseAndPronsFromExcel(xlWorkSheet.UsedRange, false);
 
             // generate training and test script
             if (caseAndProns != null && caseAndProns.Count() > LocalConfig.Instance.NCrossCaseCount)
             {
                 // generate excel for training, e.g. corpusCountFilePath = "corpus.1000.xls"
-                trainingExcelFilePath = Path.Combine(outputDir, string.Format(Util.CorpusExcelFileNamePattern, LocalConfig.Instance.NCrossCaseCount));
+                trainingExcelFilePath = Path.Combine(outputDir, Helper.NeutralFormat(Util.CorpusExcelFileNamePattern, LocalConfig.Instance.NCrossCaseCount));
                 var trainingCaseAndProns = caseAndProns.Where((input, index) => (index >= 0 && index < LocalConfig.Instance.NCrossCaseCount));
 
-                Util.ConsoleOutTextColor(string.Format("Split {0} case from {1}, saved to {2}.", LocalConfig.Instance.NCrossCaseCount, excelFilePath, trainingExcelFilePath));
+                Util.ConsoleOutTextColor(Helper.NeutralFormat("Split {0} case from {1}, saved to {2}.", LocalConfig.Instance.NCrossCaseCount, excelFilePath, trainingExcelFilePath));
                 GenExcelFromCaseAndProns(trainingCaseAndProns, trainingExcelFilePath);
 
                 // generate excel for test cases, e.g. corpusCountFilePath = "corpus.500.xls"
                 int testCount = LocalConfig.Instance.MaxCaseCount - LocalConfig.Instance.NCrossCaseCount;
-                testExcelFilePath = Path.Combine(outputDir, string.Format(Util.CorpusExcelFileNamePattern, testCount));
+                testExcelFilePath = Path.Combine(outputDir, Helper.NeutralFormat(Util.CorpusExcelFileNamePattern, testCount));
                 var testCaseAndProns = caseAndProns.Where((input, index) => (index >= LocalConfig.Instance.NCrossCaseCount));
 
-                Util.ConsoleOutTextColor(string.Format("Split {0} case from {1}, saved to {2}.", testCount, excelFilePath, testExcelFilePath));
+                Util.ConsoleOutTextColor(Helper.NeutralFormat("Split {0} case from {1}, saved to {2}.", testCount, excelFilePath, testExcelFilePath));
                 GenExcelFromCaseAndProns(testCaseAndProns, testExcelFilePath);
             }
             else
             {
-                Util.ConsoleOutTextColor(string.Format("The excel file doesn't content min {0} cases for training.", LocalConfig.Instance.NCrossCaseCount), ConsoleColor.Red);
+                Util.ConsoleOutTextColor(Helper.NeutralFormat("The excel file doesn't content min {0} cases for training.", LocalConfig.Instance.NCrossCaseCount), ConsoleColor.Red);
             }
 
             if (xlWorkBook != null)
@@ -450,7 +464,7 @@
 
             Excel.Worksheet xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
 
-            Dictionary<SentenceAndWbResult, string> caseAndProns = GetCaseAndPronsFromExcel(xlWorkSheet.UsedRange);
+            Dictionary<SentenceAndWBResult, string> caseAndProns = GetCaseAndPronsFromExcel(xlWorkSheet.UsedRange);
 
             const int count = 100;
 
@@ -544,10 +558,10 @@
 
                     // highlight the training character
                     Excel.Range xlRange = (Excel.Range)xlWorkSheet.Cells[rowIndex, 1];
-                    int startIndex = allCases[i].Content.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, allCases[i].WbResult);
+                    int startIndex = allCases[i].Content.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, allCases[i].WBResult);
                     xlRange.Characters[startIndex + 1, Util.ExcelCaseColIndex].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
 
-                    xlWorkSheet.Cells[rowIndex, Util.ExcelWbColIndex] = allCases[i].WbResult.SpaceSeparate();
+                    xlWorkSheet.Cells[rowIndex, Util.ExcelWbColIndex] = allCases[i].WBResult.SpaceSeparate();
 
                     ++rowIndex;
                 }

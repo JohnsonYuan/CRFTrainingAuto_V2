@@ -1,12 +1,21 @@
-﻿namespace CRFTrainingAuto
+﻿//-----------------------------------------------------------------------------------------
+// <copyright file="Program.cs" company="Microsoft">
+//     Copyright (c) Microsoft Corporation. All rights reserved.
+// </copyright>
+//
+// <summary>
+//     This application is used to automatic crf training.
+// </summary>
+//-----------------------------------------------------------------------------------------
+namespace CRFTrainingAuto
 {
-    using Microsoft.Tts.Offline.Utility;
     using System;
     using System.Collections.Generic;
-    using System.Linq;
     using System.IO;
-    using System.Diagnostics;
-    class Program
+    using System.Linq;
+    using Microsoft.Tts.Offline.Utility;
+
+    public class Program
     {
         /// <summary>
         /// Main of CRFTrainingAuto.
@@ -39,24 +48,57 @@
 
                 return ExitCode.InvalidArgument;
             }
-            
+
             if (!string.IsNullOrEmpty(arguments.ConfigPath))
             {
                 LocalConfig.Create(arguments.ConfigPath);
             }
 
-            CRFHelper crfHelper = new CRFHelper();
+            CrfHelper crfHelper = new CrfHelper();
 
-            // TODO
-            bool isMatch = System.Text.RegularExpressions.Regex.IsMatch("CurW = \"一个\";", "CurW = (.*);");
-            Console.WriteLine(isMatch);
-            var match = System.Text.RegularExpressions.Regex.Match("CurW = \"一个\";", "CurW = \"(.+)\";");
+            // TODO 
 
-            Debug.WriteLine(match.Groups[0].Value);
-            Debug.WriteLine(match.Groups[1].Value);
+            // crfHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, "背");
+
+            string generatedFilePath = @"D:\WorkFolder\Test\MSTTSLocZhCN.dat";
+            string generatedBakFilePath = @"D:\WorkFolder\Test\MSTTSLocZhCN.dat.bak";
+
+            string[] tempFiles = {
+                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyphony.address.bin",
+                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyphony.bin",
+                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyphony.message.bin",
+                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyphony.name.bin",
+            };
+
+            foreach (var item in tempFiles)
+            {
+                Microsoft.Tts.Offline.Compiler.LanguageData.LanguageDataHelper.ReplaceBinaryFile(
+         generatedFilePath,
+         item,
+         Microsoft.Tts.Offline.Compiler.LanguageData.ModuleDataName.PolyphoneRule);
+            }
+
             return 1;
-            // crfHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, LocalConfig.Instance.CharName);
 
+
+
+            string tempBinFile;
+            // compile polyrule.txt if update polyrule.txt file
+            //if (CompilerHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, "背"))
+            //{
+            CompilerHelper.CompileGeneralRule(LocalConfig.Instance.PolyRuleFilePath, out tempBinFile);
+
+            Microsoft.Tts.Offline.Compiler.LanguageData.LanguageDataHelper.ReplaceBinaryFile(
+                generatedFilePath,
+                tempBinFile,
+                Microsoft.Tts.Offline.Compiler.LanguageData.ModuleDataName.PolyphoneRule);
+
+            // delete the temp file
+            File.Copy(tempBinFile, @"D:\WorkFolder\Test\temp.bin");
+            File.Delete(tempBinFile);
+            //}
+
+            return 1;
 
             switch (arguments.Mode)
             {
@@ -120,41 +162,22 @@
         }
 
         /// <summary>
-        /// Split file
+        /// Split file.
         /// </summary>
-        /// <param name="splitUnit"></param>
-        /// <param name="splitSize"></param>
-        /// <param name="inputFile"></param>
-        /// <param name="outputDir"></param>
+        /// <param name="splitUnit">split unit.</param>
+        /// <param name="splitSize">split size.</param>
+        /// <param name="inputFile">input file path.</param>
+        /// <param name="outputDir">output folder.</param>
         private static void SplitFile(string splitUnit, int splitSize, string inputFile, string outputDir)
         {
             bool success = Util.SplitFile(splitUnit, splitSize, inputFile, outputDir);
             if (success)
             {
-                Util.ConsoleOutTextColor(string.Format("Split file {0} to {1}.", inputFile, outputDir));
+                Util.ConsoleOutTextColor(Helper.NeutralFormat("Split file {0} to {1}.", inputFile, outputDir));
             }
             else
             {
                 Util.ConsoleOutTextColor("Split !");
-            }
-        }
-
-        /// <summary>
-        /// Merge files
-        /// </summary>
-        /// <param name="wildcard"></param>
-        /// <param name="outputFilePath"></param>
-        private static void MergeFiles(string wildcard, string outputFilePath)
-        {
-            int mergedFileCount = Util.MergeFiles(wildcard, outputFilePath);
-
-            if (mergedFileCount == 0)
-            {
-                Util.ConsoleOutTextColor("No data generated, ternimated!");
-            }
-            else
-            {
-                Util.ConsoleOutTextColor(string.Format("All cases saved to {0}.", outputFilePath));
             }
         }
     }

@@ -1,18 +1,28 @@
-﻿namespace CRFTrainingAuto
+﻿//----------------------------------------------------------------------------
+// <copyright file="SdCommand.cs" company="MICROSOFT">
+//      Copyright (c) Microsoft Corporation.  All rights reserved.
+// </copyright>
+//
+// <summary>
+//      Execute sd.exe edit, sd.exe add and sd.exe revert command
+// </summary>
+//----------------------------------------------------------------------------
+namespace CRFTrainingAuto
 {
-    using Microsoft.Tts.Offline.Utility;
     using System;
-    using System.Collections.Generic;
     using System.IO;
-    using System.Linq;
-    using System.Text;
+    using Microsoft.Tts.Offline.Utility;
 
+    /// <summary>
+    /// Sd Command class.
+    /// </summary>
     public static class SdCommand
     {
+        #region Properties
+
         /// <summary>
-        /// SD.exe tool path
+        /// Gets SD.exe tool path.
         /// </summary>
-        /// <returns></returns>
         public static string SdToolPath
         {
             get
@@ -23,88 +33,90 @@
             }
         }
 
+        #endregion
+
+        #region Methods
+
         /// <summary>
-        /// Call sd.exe add file
+        /// Call sd.exe add file.
         /// </summary>
-        /// <param name="SdToolPath">sd.exe path</param>
-        /// <param name="filePath">file path</param>
-        /// <param name="message">result</param>
+        /// <param name="filePath">file path.</param>
+        /// <param name="message">result.</param>
         public static void SdAddFile(string filePath, out string message)
         {
             string sdMsg = string.Empty;
 
             try
             {
-                Int32 sdExitCode = CommandLine.RunCommandWithOutputAndError(SdToolPath,
-                                                string.Format("add {0}", filePath),
+                int sdExitCode = CommandLine.RunCommandWithOutputAndError(
+                                                SdToolPath,
+                                                Helper.NeutralFormat("add {0}", filePath),
                                                 Path.GetDirectoryName(SdToolPath),
                                                 ref sdMsg);
 
                 if (sdExitCode == 0)
                 {
-                    message = string.Format("Add file: {0}", filePath);
+                    message = Helper.NeutralFormat("Add file: {0}", filePath);
                 }
                 else
                 {
-                    message = string.Format("Failed to add file: {0}.\r\n{1}", filePath, sdMsg);
+                    message = Helper.NeutralFormat("Failed to add file: {0}.\r\n{1}", filePath, sdMsg);
                 }
             }
             catch (Exception e)
             {
-                message = string.Format("{0}. Failed to add file: {1}", e.Message, filePath);
+                message = Helper.NeutralFormat("{0}. Failed to add file: {1}", e.Message, filePath);
             }
         }
 
         /// <summary>
-        /// Call sd.exe edit file
+        /// Call sd.exe edit file.
         /// </summary>
-        /// <param name="SdToolPath">sd.exe path</param>
-        /// <param name="filePath">file path</param>
-        /// <param name="message">result</param>
+        /// <param name="filePath">file path.</param>
+        /// <param name="message">result.</param>
         public static void SdCheckoutFile(string filePath, out string message)
         {
             string sdMsg = string.Empty;
 
             try
             {
-                Int32 sdExitCode = CommandLine.RunCommandWithOutputAndError(SdToolPath,
-                                                string.Format("edit {0}", filePath),
+                int sdExitCode = CommandLine.RunCommandWithOutputAndError(
+                                                SdToolPath,
+                                                Helper.NeutralFormat("edit {0}", filePath),
                                                 Path.GetDirectoryName(SdToolPath),
                                                 ref sdMsg);
 
                 if (sdExitCode == 0)
                 {
-                    message = string.Format("Checked out file: {0}", filePath);
+                    message = Helper.NeutralFormat("Checked out file: {0}", filePath);
                 }
                 else
                 {
-                    message = string.Format("Failed to check out file: {0}.\r\n{1}", filePath, sdMsg);
+                    message = Helper.NeutralFormat("Failed to check out file: {0}.\r\n{1}", filePath, sdMsg);
                 }
             }
             catch (Exception e)
             {
-                message = string.Format("{0}. Failed to check out file: {1}", e.Message, filePath);
+                message = Helper.NeutralFormat("{0}. Failed to check out file: {1}", e.Message, filePath);
             }
         }
 
         /// <summary>
-        /// Call sd.exe revert unchanged file
+        /// Call sd.exe revert unchanged file.
         /// </summary>
-        /// <param name="SdToolPath">sd.exe path</param>
-        /// <param name="filePath">file path</param>
-        /// <param name="message">result</param>
-
+        /// <param name="filePath">file path.</param>
+        /// <param name="message">result.</param>
         public static void SdRevertUnchangedFile(string filePath, out string message)
         {
             string sdMsg = string.Empty;
 
             try
             {
-                Int32 sdExitCode = CommandLine.RunCommandWithOutputAndError(SdToolPath, string.Format("revert -a {0}", filePath), null, ref sdMsg);
+                int sdExitCode = CommandLine.RunCommandWithOutputAndError(SdToolPath, Helper.NeutralFormat("revert -a {0}", filePath), null, ref sdMsg);
 
                 if (sdExitCode == 0 && !string.IsNullOrEmpty(sdMsg))
                 {
-                    message = string.Format("--Reverted unchanged file: {0}", filePath);
+                    message = Helper.NeutralFormat("--Reverted unchanged file: {0}", filePath);
                 }
                 else
                 {
@@ -113,8 +125,10 @@
             }
             catch (Exception e)
             {
-                message = string.Format("--{0}. Failed to revert unchanged file: {1}", e.Message, filePath);
+                message = Helper.NeutralFormat("--{0}. Failed to revert unchanged file: {1}", e.Message, filePath);
             }
         }
+
+        #endregion
     }
 }
