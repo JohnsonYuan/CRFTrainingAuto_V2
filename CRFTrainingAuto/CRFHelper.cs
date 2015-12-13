@@ -963,7 +963,7 @@ namespace CRFTrainingAuto
                 // TODO: this is not working now, use compile all current
                 Console.WriteLine("Compiling dat file now.");
 
-                if(!CompilerHelper.CompileAll("TODO: add the langdata compiler path", out message))
+                if (!CompilerHelper.CompileAll("TODO: add the langdata compiler path", out message))
                 {
                     throw new Exception("Compile dat file failed!");
                 }
