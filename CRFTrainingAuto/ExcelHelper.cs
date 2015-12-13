@@ -16,14 +16,19 @@ namespace CRFTrainingAuto
     using Microsoft.Tts.Offline.Utility;
     using Excel = Microsoft.Office.Interop.Excel;
 
+    /// <summary>
+    /// Excel helper class.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
     public static class ExcelHelper
     {
         /// <summary>
-        /// Each Dictionary item contains the case and the pron
+        /// Each Dictionary item contains the case and the pron.
         /// </summary>
-        /// <param name="usedRange">Excel used range</param>
-        /// <param name="useNavtivePhone">if true, the return value's pron is native pron, else use pinyin</param>
-        /// <returns>Dictionary contains case and native pron</returns>
+        /// <param name="usedRange">Excel used range.</param>
+        /// <param name="useNavtivePhone">If true, the return value's pron is native pron, else use pinyin.</param>
+        /// <returns>Dictionary contains case and native pronunciation.</returns>
         public static Dictionary<SentenceAndWBResult, string> GetCaseAndPronsFromExcel(Excel.Range usedRange, bool useNavtivePhone = true)
         {
             Dictionary<SentenceAndWBResult, string> caseAndProns = new Dictionary<SentenceAndWBResult, string>();
@@ -31,14 +36,14 @@ namespace CRFTrainingAuto
             WordBreaker wordBreaker = null;
             try
             {
-                for (int rCnt = 2; rCnt <= usedRange.Rows.Count; rCnt++)
+                for (int rowIndex = 2; rowIndex <= usedRange.Rows.Count; rowIndex++)
                 {
                     SentenceAndWBResult tempReseult = new SentenceAndWBResult();
 
                     // first column for case, second column for corrct pron
-                    string caseVal = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelCaseColIndex] as Excel.Range).Value2);
-                    tempReseult.Content = caseVal.Replace(" ", "").Replace("\t", "");
-                    string wbResult = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelWbColIndex] as Excel.Range).Value2);
+                    string caseVal = Convert.ToString((usedRange.Cells[rowIndex, Util.ExcelCaseColIndex] as Excel.Range).Value2);
+
+                    string wbResult = Convert.ToString((usedRange.Cells[rowIndex, Util.ExcelWbColIndex] as Excel.Range).Value2);
 
                     // if excel doesn't contains the word break result, create a new wrod breaker
                     if (!string.IsNullOrEmpty(wbResult))
@@ -55,10 +60,12 @@ namespace CRFTrainingAuto
                         tempReseult.WBResult = wordBreaker.BreakWords(caseVal);
                     }
 
-                    string pinYinPron = Convert.ToString((usedRange.Cells[rCnt, Util.ExcelCorrectPronColIndex] as Excel.Range).Value2);
+                    tempReseult.Content = tempReseult.WBResult.ConcatToString();
+
+                    string pinYinPron = Convert.ToString((usedRange.Cells[rowIndex, Util.ExcelCorrectPronColIndex] as Excel.Range).Value2);
                     if (string.IsNullOrWhiteSpace(pinYinPron))
                     {
-                        throw new Exception(Helper.NeutralFormat("Excel in line {0} doesn't provide the pron.", rCnt));
+                        throw new Exception(Helper.NeutralFormat("Excel in line {0} doesn't provide the pron.", rowIndex));
                     }
 
                     pinYinPron = pinYinPron.Trim();
@@ -66,14 +73,14 @@ namespace CRFTrainingAuto
                     if (string.IsNullOrEmpty(caseVal) ||
                         string.IsNullOrEmpty(pinYinPron))
                     {
-                        throw new Exception(Helper.NeutralFormat("Excel file in row {0} has the empty case or pron!", rCnt));
+                        throw new Exception(Helper.NeutralFormat("Excel file in row {0} has the empty case or pron!", rowIndex));
                     }
 
                     if (!caseAndProns.ContainsKey(tempReseult))
                     {
                         // check the pron is in config file
-                        if ((LocalConfig.Instance.Prons.ContainsKey(pinYinPron) &&
-                            !string.IsNullOrEmpty(LocalConfig.Instance.Prons[pinYinPron])))
+                        if (LocalConfig.Instance.Prons.ContainsKey(pinYinPron) &&
+                            !string.IsNullOrEmpty(LocalConfig.Instance.Prons[pinYinPron]))
                         {
                             // if don't use native phone, we add the pinyin pron to result
                             if (!useNavtivePhone)
@@ -87,11 +94,12 @@ namespace CRFTrainingAuto
                         }
                         else
                         {
-                            string errorMsg = Helper.NeutralFormat("Excel file in row {0} has the wrong pron \"{1}\"! It should like ", rCnt, pinYinPron);
+                            string errorMsg = Helper.NeutralFormat("Excel file in row {0} has the wrong pron \"{1}\"! It should like ", rowIndex, pinYinPron);
                             foreach (string val in LocalConfig.Instance.Prons.Keys)
                             {
                                 errorMsg += val + " ";
                             }
+
                             errorMsg += ".";
                             throw new Exception(errorMsg);
                         }
@@ -110,11 +118,10 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Generate Excel From caseAndProns
+        /// Generate Excel From caseAndProns.
         /// </summary>
-        /// </summary>
-        /// <param name="caseAndProns">case and pron</param>
-        /// <param name="outputFilePath">output file path</param>
+        /// <param name="caseAndProns">Case and pronunciation.</param>
+        /// <param name="outputFilePath">Output file path.</param>
         public static void GenExcelFromCaseAndProns(IEnumerable<KeyValuePair<SentenceAndWBResult, string>> caseAndProns, string outputFilePath)
         {
             if (File.Exists(outputFilePath))
@@ -145,7 +152,6 @@ namespace CRFTrainingAuto
                 xlWorkSheet.Cells[1, Util.ExcelCorrectPronColIndex] = Util.ExcelCorrectPronColTitle;
                 xlWorkSheet.Cells[1, Util.ExcelCommentColIndex] = Util.ExcelCorrectPronColTitle;
                 xlWorkSheet.Cells[1, Util.ExcelWbColIndex] = Util.ExcelWbColTitle;
-
 
                 int rowIndex = 2;
 
@@ -197,12 +203,14 @@ namespace CRFTrainingAuto
 
         /// <summary>
         /// Verify excel sheet, make sure it contains at least 2 rows, 2 columns
-        /// first row it the title line, 2 columns one for case, one for pron
+        /// first row it the title line, 2 columns one for case, one for pronunciation.
         /// </summary>
-        /// <param name="xlSheet">excel sheet</param>
+        /// <param name="xlSheet">Excel sheet.</param>
+        /// <returns>Success or not.</returns>
         public static bool VerifyExcelSheet(Excel.Worksheet xlSheet)
         {
             Excel.Range range = xlSheet.UsedRange;
+
             // at least 2 rows, 2 columns
             if (range.Rows.Count <= 1 || range.Columns.Count <= 1)
             {
@@ -213,9 +221,9 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Properly clean up Excel interop objects
+        /// Properly clean up Excel interop objects.
         /// </summary>
-        /// <param name="obj">excel object</param>
+        /// <param name="obj">Excel object.</param>
         public static void ReleaseExcelObject(object obj)
         {
             try
@@ -234,12 +242,12 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Divide Excel file to training and test part
+        /// Divide Excel file to training and test part.
         /// </summary>
-        /// <param name="excelFilePath">excel file path</param>
-        /// <param name="outputDir">output folder</param>
-        /// <param name="trainingExcelFilePath">training excel file path</param>
-        /// <param name="testExcelFilePath">test excel file path</param>
+        /// <param name="excelFilePath">Excel file path.</param>
+        /// <param name="outputDir">Output folder.</param>
+        /// <param name="trainingExcelFilePath">Training excel file path.</param>
+        /// <param name="testExcelFilePath">Test excel file path.</param>
         public static void DivideExcelCorpus(string excelFilePath, string outputDir, out string trainingExcelFilePath, out string testExcelFilePath)
         {
             trainingExcelFilePath = testExcelFilePath = null;
@@ -254,7 +262,7 @@ namespace CRFTrainingAuto
                 return;
             }
 
-            Excel.Workbook xlWorkBook = xlApp.Workbooks.Open(excelFilePath, 0, false, 5, "", "", false, Excel.XlPlatform.xlWindows, "",
+            Excel.Workbook xlWorkBook = xlApp.Workbooks.Open(excelFilePath, 0, false, 5, string.Empty, string.Empty, false, Excel.XlPlatform.xlWindows, string.Empty,
                         true, false, 0, true, false, false);
             object misValue = System.Reflection.Missing.Value;
 
@@ -269,7 +277,7 @@ namespace CRFTrainingAuto
                 trainingExcelFilePath = Path.Combine(outputDir, Helper.NeutralFormat(Util.CorpusExcelFileNamePattern, LocalConfig.Instance.NCrossCaseCount));
                 var trainingCaseAndProns = caseAndProns.Where((input, index) => (index >= 0 && index < LocalConfig.Instance.NCrossCaseCount));
 
-                Util.ConsoleOutTextColor(Helper.NeutralFormat("Split {0} case from {1}, saved to {2}.", LocalConfig.Instance.NCrossCaseCount, excelFilePath, trainingExcelFilePath));
+                Helper.PrintSuccessMessage(Helper.NeutralFormat("Split {0} case from {1}, saved to {2}.", LocalConfig.Instance.NCrossCaseCount, excelFilePath, trainingExcelFilePath));
                 GenExcelFromCaseAndProns(trainingCaseAndProns, trainingExcelFilePath);
 
                 // generate excel for test cases, e.g. corpusCountFilePath = "corpus.500.xls"
@@ -277,18 +285,19 @@ namespace CRFTrainingAuto
                 testExcelFilePath = Path.Combine(outputDir, Helper.NeutralFormat(Util.CorpusExcelFileNamePattern, testCount));
                 var testCaseAndProns = caseAndProns.Where((input, index) => (index >= LocalConfig.Instance.NCrossCaseCount));
 
-                Util.ConsoleOutTextColor(Helper.NeutralFormat("Split {0} case from {1}, saved to {2}.", testCount, excelFilePath, testExcelFilePath));
+                Helper.PrintSuccessMessage(Helper.NeutralFormat("Split {0} case from {1}, saved to {2}.", testCount, excelFilePath, testExcelFilePath));
                 GenExcelFromCaseAndProns(testCaseAndProns, testExcelFilePath);
             }
             else
             {
-                Util.ConsoleOutTextColor(Helper.NeutralFormat("The excel file doesn't content min {0} cases for training.", LocalConfig.Instance.NCrossCaseCount), ConsoleColor.Red);
+                Helper.PrintColorMessageToOutput(ConsoleColor.Red, Helper.NeutralFormat("The excel file doesn't content min {0} cases for training.", LocalConfig.Instance.NCrossCaseCount));
             }
 
             if (xlWorkBook != null)
             {
                 xlWorkBook.Close(true, misValue, misValue);
             }
+
             if (xlApp != null)
             {
                 xlApp.Quit();
@@ -301,7 +310,6 @@ namespace CRFTrainingAuto
 
         /// <summary>
         /// Genereate excel test report from frontmeasure test result
-        /// 
         /// test report is like this:
         /// POLYPHONE: 背
         /// INPUT: (P1)
@@ -309,10 +317,9 @@ namespace CRFTrainingAuto
         /// EXPECTED: 
         /// b eh_h i_h /
         /// RESULT: 
-        /// b eh_h i_l /
-        /// 
+        /// b eh_h i_l /.
         /// </summary>
-        /// <param name="testResultFile">test result file path</param>
+        /// <param name="testResultFile">Test result file path.</param>
         public static void GenExcelTestReport(string testResultFile)
         {
             Helper.ThrowIfFileNotExist(testResultFile);
@@ -329,26 +336,23 @@ namespace CRFTrainingAuto
                 {
                     string currentLine = reader.ReadLine().Trim();
 
-                    switch (currentLine)
+                    if (reader.Peek() > -1)
                     {
-                        case "INPUT: (P1)":
-                            if (reader.Peek() > -1)
-                            {
+                        switch (currentLine)
+                        {
+                            case "INPUT: (P1)":
                                 inputLines.Add(reader.ReadLine().Trim());
-                            }
-                            break;
-                        case "EXPECTED:":
-                            if (reader.Peek() > -1)
-                            {
-                                expectedLines.Add(reader.ReadLine().TrimEnd(new char[] { '/', ' '}));
-                            }
-                            break;
-                        case "RESULT:":
-                            if (reader.Peek() > -1)
-                            {
+
+                                break;
+                            case "EXPECTED:":
+                                expectedLines.Add(reader.ReadLine().TrimEnd(new char[] { '/', ' ' }));
+
+                                break;
+                            case "RESULT:":
                                 resultLines.Add(reader.ReadLine().TrimEnd(new char[] { '/', ' ' }));
-                            }
-                            break;
+
+                                break;
+                        }
                     }
                 }
             }
@@ -373,7 +377,7 @@ namespace CRFTrainingAuto
                 xlWorkBook = xlApp.Workbooks.Add(misValue);
                 xlWorkSheet = (Excel.Worksheet)xlWorkBook.Worksheets.get_Item(1);
 
-                WordBreaker wordBreaker = new WordBreaker (LocalConfig.Instance);
+                WordBreaker wordBreaker = new WordBreaker(LocalConfig.Instance);
 
                 try
                 {
@@ -442,10 +446,10 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Divide 1000 corpus to 10 separate testing and training part
+        /// Divide 1000 corpus to 10 separate testing and training part.
         /// </summary>
-        /// <param name="excelFile">excel file path</param>
-        /// <param name="outputDir">output folder</param>
+        /// <param name="excelFile">Excel file path.</param>
+        /// <param name="outputDir">Output folder.</param>
         public static void GenNCrossExcel(string excelFile, string outputDir)
         {
             // initialize the Excel application Object
@@ -454,11 +458,11 @@ namespace CRFTrainingAuto
             // check whether Excel is installed in your system.
             if (xlApp == null)
             {
-                Console.WriteLine("Excel is not properly installed!!");
+                Console.WriteLine("Excel is not properly installed!");
                 return;
             }
 
-            Excel.Workbook xlWorkBook = xlApp.Workbooks.Open(excelFile, 0, false, 5, "", "", false, Excel.XlPlatform.xlWindows, "",
+            Excel.Workbook xlWorkBook = xlApp.Workbooks.Open(excelFile, 0, false, 5, string.Empty, string.Empty, false, Excel.XlPlatform.xlWindows, string.Empty,
                         true, false, 0, true, false, false);
             object misValue = System.Reflection.Missing.Value;
 
@@ -466,15 +470,15 @@ namespace CRFTrainingAuto
 
             Dictionary<SentenceAndWBResult, string> caseAndProns = GetCaseAndPronsFromExcel(xlWorkSheet.UsedRange);
 
-            const int count = 100;
+            const int Count = 100;
 
             // Generate 10 cross folder
             for (int i = 0; i < LocalConfig.Instance.NFolderCount; i++)
             {
                 var testingcaseAndProns = caseAndProns.Where((kvPair, index) =>
-                    index >= i * count && index < (i + 1) * count);
+                    index >= i * Count && index < (i + 1) * Count);
                 var trainingcaseAndProns = caseAndProns.Where((kvPair, index) =>
-                    (index >= 0 && index < i * count) || (index >= (i + 1) * count && index < 1000));
+                    (index >= 0 && index < i * Count) || (index >= (i + 1) * Count && index < 1000));
 
                 string dirPath = Path.Combine(outputDir, (i + 1).ToString());
                 string trainingFolder = Path.Combine(dirPath, Util.TrainingFolderName);
@@ -499,6 +503,7 @@ namespace CRFTrainingAuto
             {
                 xlWorkBook.Close(true, misValue, misValue);
             }
+
             if (xlApp != null)
             {
                 xlApp.Quit();
@@ -511,11 +516,11 @@ namespace CRFTrainingAuto
 
         /// <summary>
         /// Generate excel from txt file
-        /// Generated Excel file contains 3 column: "case", "correct pron" and "comment"
+        /// Generated Excel file contains 3 column: "case", "correct pron" and "comment".
         /// </summary>
-        /// <param name="inFilePath">txt file path</param>
-        /// <param name="outputDir">output file path</param>
-        /// <param name="isNeedWb">if true, need use wrod breaker genereate the word break result, false the input file contains the word break result</param>
+        /// <param name="inFilePath">Input txt file path.</param>
+        /// <param name="outputFilePath">Output excel file path.</param>
+        /// <param name="hasWbResult">If true word break result read from the txt file, false create new word breaker generate break result.</param>
         public static void GenExcelFromTxtFile(string inFilePath, string outputFilePath, bool hasWbResult = true)
         {
             Console.WriteLine("Generating excel from " + inFilePath);

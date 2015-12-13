@@ -15,6 +15,11 @@ namespace CRFTrainingAuto
     using System.Text;
     using Microsoft.Tts.Offline.Utility;
 
+    /// <summary>
+    /// Util class contains file operations.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
     public static class Util
     {
         #region internal Fields
@@ -114,14 +119,14 @@ namespace CRFTrainingAuto
 
         #endregion
 
-        #region public methods
+        #region Public methods
 
         /// <summary>
         /// Merge all files to a single file.
         /// </summary>
-        /// <param name="wildcard">file path contains wildcard.</param>
-        /// <param name="saveFilePath">output file path.</param>
-        /// <returns>files.Length.</returns>
+        /// <param name="wildcard">File path contains wildcard.</param>
+        /// <param name="saveFilePath">Output file path.</param>
+        /// <returns>Merged files count.</returns>
         public static int MergeFiles(string wildcard, string saveFilePath)
         {
             string[] files = GetAllFiles(wildcard);
@@ -176,11 +181,11 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Splict large files and save to.
         /// </summary>
-        /// <param name="splitUnit">split unit, GB, MB, KB, Byte.</param>
-        /// <param name="intFlag">split size.</param>
-        /// <param name="inFilePath">input file path.</param>
-        /// <param name="outputDir">output folder.</param>
-        /// <returns>splict success fail or not.</returns>
+        /// <param name="splitUnit">Split unit, GB, MB, KB, Byte.</param>
+        /// <param name="intFlag">Split size.</param>
+        /// <param name="inFilePath">Input file path.</param>
+        /// <param name="outputDir">Output folder.</param>
+        /// <returns>Split success fail or not.</returns>
         public static bool SplitFile(string splitUnit, int intFlag, string inFilePath, string outputDir)
         {
             bool suc = false;
@@ -281,8 +286,8 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Get all files from a file path with wildcard such as "*" and "?".
         /// </summary>
-        /// <param name="wildcard">the file path with wildcard.</param>
-        /// <returns>the files.</returns>
+        /// <param name="wildcard">The file path with wildcard.</param>
+        /// <returns>Files match the wildcard.</returns>
         public static string[] GetAllFiles(string wildcard)
         {
             if (Path.IsPathRooted(wildcard))
@@ -296,10 +301,10 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// if path is config/training.config, convert to D:/config/training.config.
+        /// If path is config/training.config, convert to D:/config/training.config.
         /// </summary>
-        /// <param name="path">file path.</param>
-        /// <returns>absolute path.</returns>
+        /// <param name="path">File path.</param>
+        /// <returns>Absolute file path.</returns>
         public static string GetAbsolutePath(string path)
         {
             if (!Path.IsPathRooted(path))
@@ -311,38 +316,12 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Create directory if not exist.
-        /// </summary>
-        /// <param name="dirPath">directory path.</param>
-        public static void CreateDirIfNotExist(string dirPath)
-        {
-            if (!Directory.Exists(dirPath))
-            {
-                Directory.CreateDirectory(dirPath);
-            }
-        }
-
-        /// <summary>
-        /// Check file read-only attribute.
-        /// if it's read-only, modify to read-write.
-        /// </summary>
-        /// <param name="filePath">File path.</param>
-        public static void DisableFileReadOnly(string filePath)
-        {
-            FileInfo fi = new FileInfo(filePath);
-            if (fi.IsReadOnly)
-            {
-                fi.IsReadOnly = false;
-            }
-        }
-
-        /// <summary>
         /// Modify or insert new value for some line.
         /// </summary>
-        /// <param name="filePath">the file to be modified.</param>
-        /// <param name="lineNumber">line number.</param>
-        /// <param name="newLineValue">new value for line, if null, remove this line.</param>
-        /// <param name="insert">if true, new value will be inserted, if false, original value in this line will be replaced.</param>
+        /// <param name="filePath">The file to be modified.</param>
+        /// <param name="lineNumber">Line number.</param>
+        /// <param name="newLineValue">New value for line, if null, remove this line.</param>
+        /// <param name="insert">If true, new value will be inserted, if false, original value in this line will be replaced.</param>
         public static void EditLineInFile(string filePath, int lineNumber, string newLineValue, bool insert = true)
         {
             StringBuilder sb = new StringBuilder();
@@ -361,7 +340,6 @@ namespace CRFTrainingAuto
                         }
                         else
                         {
-
                             sb.Append(newLineValue + Environment.NewLine);
                         }
                     }
@@ -394,28 +372,15 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Set the console text color.
-        /// </summary>
-        /// <param name="content">content.</param>
-        /// <param name="color">color, default green.</param>
-        public static void ConsoleOutTextColor(string content, ConsoleColor color = ConsoleColor.Green)
-        {
-            ConsoleColor consolePrevColor = Console.ForegroundColor;
-            Console.ForegroundColor = color;
-            Console.WriteLine(content);
-            Console.ForegroundColor = consolePrevColor;
-        }
-
-        /// <summary>
         /// Get same file name but different extension.
         /// </summary>
         /// <example>
-        /// change D:\filename.txt to D:\filename.xls.
+        /// Change D:\filename.txt to D:\filename.xls.
         /// </example>
-        /// <param name="filePath">file path.</param>
-        /// <param name="newExtension">new extension name.</param>
-        /// <returns>new file path.</returns>
-        public static string ChangeFileExtension(string filePath, string newExtension)
+        /// <param name="filePath">File path.</param>
+        /// <param name="newExtension">New extension name.</param>
+        /// <returns>New file path with the new extension.</returns>
+        public static string GetFilePathWithNewExtension(string filePath, string newExtension)
         {
             return Path.Combine(
                 Path.GetDirectoryName(filePath),
@@ -425,9 +390,9 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Get case and wb result from corpus file.
         /// </summary>
-        /// <param name="inputFilePath">txt corpus file path.</param>
-        /// <param name="hasWbResult">whether the file has word break.</param>
-        /// <returns>sentence and word break result.</returns>
+        /// <param name="inputFilePath">Txt corpus file path.</param>
+        /// <param name="hasWbResult">Whether the file has word break.</param>
+        /// <returns>Sntence and word break result.</returns>
         public static IList<SentenceAndWBResult> GetSenAndWbFromCorpus(string inputFilePath, bool hasWbResult = true)
         {
             Helper.ThrowIfFileNotExist(inputFilePath);
@@ -451,6 +416,7 @@ namespace CRFTrainingAuto
                                 // we use the wbResult to generate the case, because we have to remove empty part
                                 // in the case, and it's hard to list all space possibility, like space, tab, or unicode empty char(8195)
                                 var wbResult = reader.ReadLine().SplitBySpace();
+
                                 results.Add(new SentenceAndWBResult
                                 {
                                     Content = wbResult.ConcatToString(),
@@ -492,8 +458,8 @@ namespace CRFTrainingAuto
         /// </summary>
         /// <param name="inputFilePath">Bug fixing file path
         /// file format is like below
-        /// 我还差你五元钱。	ch a_h a_l
-        /// 我们离父母的希望还差很远。	ch a_h a_l.
+        /// 我还差你五元钱。ch a_h a_l
+        /// 我们离父母的希望还差很远。ch a_h a_l.
         /// </param>
         /// <returns>Dictionary contains case and pronunciation.</returns>
         public static Dictionary<string, string> GetSenAndPronFromBugFixingFile(string inputFilePath)
@@ -552,11 +518,9 @@ namespace CRFTrainingAuto
             }
             finally
             {
-
                 wordBreaker.Dispose();
             }
-
-
+            
             return senAndProns;
         }
 

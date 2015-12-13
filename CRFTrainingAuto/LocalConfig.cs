@@ -19,6 +19,11 @@ namespace CRFTrainingAuto
     using Microsoft.Tts.Offline.Common;
     using Microsoft.Tts.Offline.Utility;
 
+    /// <summary>
+    /// LocalConfig.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
     public class LocalConfig : XmlDataFile
     {
         #region Static fields
@@ -31,16 +36,16 @@ namespace CRFTrainingAuto
         #region Fields
 
         // target\distrib\debug\{amd64/x86}\dev\TTS\Server\bin\Offline
-        private string OfflineToolPathPattern = @"target\distrib\debug\{0}\dev\TTS\Server\bin\Offline";
+        private readonly string _offlineToolPathPattern = @"target\distrib\debug\{0}\dev\TTS\Server\bin\Offline";
         
         // private\dev\speech\tts\shenzhou\data\zh-CN\Language\Model.Rule\PolyphonyModel\ModelUsed
-        private string CRFModelDirPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Language\Model.Rule\PolyphonyModel\ModelUsed";
+        private readonly string _crfModelDirPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Language\Model.Rule\PolyphonyModel\ModelUsed";
         
         // private\dev\speech\tts\shenzhou\src\lochand\ZhCN\MSTTSLocZhCN.dat
-        private string LangDataPathPattern = @"private\dev\speech\tts\shenzhou\src\lochand\{0}\MSTTSLoc{0}.dat";
+        private readonly string _langDataPathPattern = @"private\dev\speech\tts\shenzhou\src\lochand\{0}\MSTTSLoc{0}.dat";
         
         // private\dev\speech\tts\shenzhou\data\zh-CN\Language\Model.Rule\Polyphony\polyrule.txt
-        private string PolyRuleFilePathPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Language\Model.Rule\Polyphony\polyrule.txt";
+        private readonly string _polyRuleFilePathPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Language\Model.Rule\Polyphony\polyrule.txt";
 
         private string _charName;
         private Language _lang;
@@ -63,6 +68,7 @@ namespace CRFTrainingAuto
         private string _featuresConfigTemplate;
         private int _showTipCount;
         private XmlSchema _schema;
+
         #endregion
 
         #region Constructor
@@ -70,7 +76,7 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Initializes a new instance of the LocalConfig class.
         /// </summary>
-        /// <param name="configPath">xml config file path.</param>
+        /// <param name="configPath">Xml config file path.</param>
         private LocalConfig(string configPath)
         {
             base.Load(configPath);
@@ -170,7 +176,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Gets default pron for word has no pron.
+        /// Gets default pron for word has no pronunciation.
         /// </summary>
         public string DefaultWordPron
         {
@@ -225,7 +231,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Gets word prons contains pinyin and native phone.
+        /// Gets word pronunciations contains pinyin and native phone.
         /// </summary>
         public Dictionary<string, string> Prons
         {
@@ -247,7 +253,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Gets architecure, Amd64 or x86.
+        /// Gets architecure, amd64 or x86.
         /// </summary>
         public string Arch
         {
@@ -324,7 +330,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Gets or sets show pogress count when filtering char.
+        /// Gets or sets show progress count when filtering char.
         /// </summary>
         public int ShowTipCount
         {
@@ -345,7 +351,7 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Init _instance when _instance is null, support multithread Singleton.
         /// </summary>
-        /// <param name="configFilePath">xml config file path.</param>
+        /// <param name="configFilePath">Xml config file path.</param>
         public static void Create(string configFilePath)
         {
             if (_instance == null)
@@ -367,9 +373,9 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Load XML file.
         /// </summary>
-        /// <param name="xmlDoc">XmlDoc.</param>
-        /// <param name="nsmgr">Nsmgr.</param>
-        /// <param name="contentController">Content controler.</param>
+        /// <param name="xmlDoc">XmlDocument.</param>
+        /// <param name="nsmgr">Xml namespace manager.</param>
+        /// <param name="contentController">Content controller.</param>
         protected override void Load(XmlDocument xmlDoc, XmlNamespaceManager nsmgr, object contentController)
         {
             XmlNode node;
@@ -508,16 +514,16 @@ namespace CRFTrainingAuto
             {
                 this._arch = node.InnerText;
 
-                this._offlineToolPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this.OfflineToolPathPattern, this._arch));
+                this._offlineToolPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._offlineToolPathPattern, this._arch));
                 Helper.ThrowIfDirectoryNotExist(this._offlineToolPath);
 
-                this._crfModelDir = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this.CRFModelDirPattern, Localor.LanguageToString(this._lang)));
+                this._crfModelDir = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._crfModelDirPattern, Localor.LanguageToString(this._lang)));
                 Helper.ThrowIfDirectoryNotExist(this._crfModelDir);
 
-                this._langDataPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this.LangDataPathPattern, Localor.LanguageToString(this._lang).Replace("-", string.Empty)));
+                this._langDataPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._langDataPathPattern, this._lang));
                 Helper.ThrowIfFileNotExist(this._langDataPath);
 
-                this._polyRuleFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this.PolyRuleFilePathPattern, Localor.LanguageToString(this._lang)));
+                this._polyRuleFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._polyRuleFilePathPattern, Localor.LanguageToString(this._lang)));
                 Helper.ThrowIfFileNotExist(this._polyRuleFilePath);
             }
 

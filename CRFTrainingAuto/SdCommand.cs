@@ -16,6 +16,8 @@ namespace CRFTrainingAuto
     /// <summary>
     /// Sd Command class.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
     public static class SdCommand
     {
         #region Properties
@@ -40,8 +42,8 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Call sd.exe add file.
         /// </summary>
-        /// <param name="filePath">file path.</param>
-        /// <param name="message">result.</param>
+        /// <param name="filePath">File path.</param>
+        /// <param name="message">Result.</param>
         public static void SdAddFile(string filePath, out string message)
         {
             string sdMsg = string.Empty;
@@ -72,8 +74,8 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Call sd.exe edit file.
         /// </summary>
-        /// <param name="filePath">file path.</param>
-        /// <param name="message">result.</param>
+        /// <param name="filePath">File path.</param>
+        /// <param name="message">Result.</param>
         public static void SdCheckoutFile(string filePath, out string message)
         {
             string sdMsg = string.Empty;
@@ -104,8 +106,8 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Call sd.exe revert unchanged file.
         /// </summary>
-        /// <param name="filePath">file path.</param>
-        /// <param name="message">result.</param>
+        /// <param name="filePath">File path.</param>
+        /// <param name="message">Result.</param>
         public static void SdRevertUnchangedFile(string filePath, out string message)
         {
             string sdMsg = string.Empty;

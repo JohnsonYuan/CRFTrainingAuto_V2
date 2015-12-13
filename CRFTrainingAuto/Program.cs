@@ -14,7 +14,7 @@ namespace CRFTrainingAuto
     using System.IO;
     using System.Linq;
     using Microsoft.Tts.Offline.Utility;
-    using Microsoft.Tts.Offline.Frontend;
+
     public class Program
     {
         /// <summary>
@@ -38,11 +38,11 @@ namespace CRFTrainingAuto
 
             if (errors.Count() != 0)
             {
-                Util.ConsoleOutTextColor("Arguments you provided has some error");
+                Helper.PrintSuccessMessage("Arguments you provided has some error");
 
                 foreach (var error in errors)
                 {
-                    Util.ConsoleOutTextColor(error, ConsoleColor.Red);
+                    Helper.PrintColorMessageToOutput(ConsoleColor.Red, error);
                     Console.WriteLine();
                 }
 
@@ -56,121 +56,58 @@ namespace CRFTrainingAuto
 
             CrfHelper crfHelper = new CrfHelper();
 
-            // TODO 
-
-            // crfHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, "背");
-
-            string generatedFilePath = @"D:\WorkFolder\Test\MSTTSLocZhCN.dat";
-            string generatedBakFilePath = @"D:\WorkFolder\Test\MSTTSLocZhCN.dat.bak";
-
-            string[] tempFiles = {
-                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyrule.address.bin",
-                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyrule.bin",
-                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyrule.message.bin",
-                @"D:\Enlistments\IPESpeechCore_Dev\private\dev\speech\tts\shenzhou\data\zh-CN\binary\polyrule.name.bin",
-            };
-
-            RuleFile ruleFile = new RuleFile();
-            ruleFile.Load(LocalConfig.Instance.PolyRuleFilePath);
-            RuleFile[] ruleFiles = ruleFile.Split();
-
-            string[] txtFiles = {
-                @"D:\WorkFolder\Test\polyrule.address.txt",
-                @"D:\WorkFolder\Test\polyrule.general.txt",
-                @"D:\WorkFolder\Test\polyrule.message.txt",
-                @"D:\WorkFolder\Test\polyrule.name.txt",
-            };
-
-            foreach (var item in txtFiles)
-            {
-                string tempBin;
-                CompilerHelper.CompileGeneralRule(item, out tempBin);
-                File.Copy(tempBin,@"D:\WorkFolder\Test\" + Path.GetFileNameWithoutExtension(item) + ".bin");
-            }
-
-            return 1;
-            foreach (var item in tempFiles)
-            {
-                Microsoft.Tts.Offline.Compiler.LanguageData.LanguageDataHelper.ReplaceBinaryFile(
-                 generatedFilePath,
-                 item,
-                 Microsoft.Tts.Offline.Compiler.LanguageData.ModuleDataName.PolyphoneRule);
-            }
-
-            return 1;
-
-
-
-            string tempBinFile;
-            // compile polyrule.txt if update polyrule.txt file
-            //if (CompilerHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, "背"))
-            //{
-            CompilerHelper.CompileGeneralRule(LocalConfig.Instance.PolyRuleFilePath, out tempBinFile);
-
-            Microsoft.Tts.Offline.Compiler.LanguageData.LanguageDataHelper.ReplaceBinaryFile(
-                generatedFilePath,
-                tempBinFile,
-                Microsoft.Tts.Offline.Compiler.LanguageData.ModuleDataName.PolyphoneRule);
-
-            // delete the temp file
-            File.Copy(tempBinFile, @"D:\WorkFolder\Test\temp.bin");
-            File.Delete(tempBinFile);
-            //}
-
-            return 1;
-
             switch (arguments.Mode)
             {
-                case Arguments.ExecuteMode.FilterChar:
+                case ExecuteMode.FilterChar:
                     // InputPath, OutputPath are all folders
                     crfHelper.PrepareTrainTestSet(arguments.InputPath, arguments.OutputPath, arguments.WbPath);
                     break;
-                case Arguments.ExecuteMode.NCRF:
+                case ExecuteMode.NCRF:
                     // InputPath is excel file path, OutputPath is folder path
                     crfHelper.GenNCrossData(arguments.InputPath, arguments.OutputPath);
                     break;
-                case Arguments.ExecuteMode.GenVerify:
+                case ExecuteMode.GenVerify:
                     // InputPath is excel file path, OutputPath is folder path
                     crfHelper.GenVerifyResult(arguments.InputPath, arguments.OutputPath);
                     break;
-                case Arguments.ExecuteMode.GenXlsTestReport:
+                case ExecuteMode.GenXlsTestReport:
                     // InputPath is txt file path
                     ExcelHelper.GenExcelTestReport(arguments.InputPath);
                     break;
-                case Arguments.ExecuteMode.Compile:
+                case ExecuteMode.Compile:
                     // InputPath is folder
                     crfHelper.CompileAndTestInFolder(arguments.InputPath);
                     break;
-                case Arguments.ExecuteMode.GenXls:
+                case ExecuteMode.GenXls:
                     // InputPath is txt file path, OutputPath is excel file path
                     // if IsNeedWb == 0, the word break result is in input file, otherwise, use word break genereate word break result
                     ExcelHelper.GenExcelFromTxtFile(arguments.InputPath, arguments.OutputPath, arguments.IsNeedWb == 0);
                     break;
-                case Arguments.ExecuteMode.GenTrain:
-                case Arguments.ExecuteMode.GenTest:
+                case ExecuteMode.GenTrain:
+                case ExecuteMode.GenTest:
                     // InputPath is excel file path, OutputPath is xml file path
-                    GenerateAction action = arguments.Mode == Arguments.ExecuteMode.GenTrain ? GenerateAction.TrainingScript : GenerateAction.TestCase;
+                    GenerateAction action = arguments.Mode == ExecuteMode.GenTrain ? GenerateAction.TrainingScript : GenerateAction.TestCase;
                     string folder = Path.GetDirectoryName(arguments.OutputPath);
                     string filename = Path.GetFileName(arguments.OutputPath);
                     ScriptGenerator.GenScript(arguments.InputPath, action, folder, filename, arguments.StartIndexOrFilePath);
                     break;
-                case Arguments.ExecuteMode.BugFixing:
+                case ExecuteMode.BugFixing:
                     // InputPath is txt file path
                     crfHelper.AppendTrainingScriptAndReRunTest(arguments.InputPath, arguments.OutputPath);
                     break;
-                case Arguments.ExecuteMode.WB:
+                case ExecuteMode.WB:
                     // InputPath is wildcard file path, OutputPath is folder path
                     crfHelper.DoWordBreak(arguments.InputPath, arguments.OutputPath);
                     break;
-                case Arguments.ExecuteMode.SS:
+                case ExecuteMode.SS:
                     // InputPath, OutputPath are all folders
                     SentenceBreaker.DoSentenceSeparate(arguments.InputPath, arguments.OutputPath);
                     break;
-                case Arguments.ExecuteMode.Merge:
+                case ExecuteMode.Merge:
                     // InputPath, OutputPath are all folders
                     crfHelper.MergeAndRandom(arguments.InputPath, arguments.OutputPath);
                     break;
-                case Arguments.ExecuteMode.Split:
+                case ExecuteMode.Split:
                     SplitFile(arguments.SplitUnit, arguments.SplitSize, arguments.InputPath, arguments.OutputPath);
                     break;
                 default:
@@ -183,20 +120,20 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Split file.
         /// </summary>
-        /// <param name="splitUnit">split unit.</param>
-        /// <param name="splitSize">split size.</param>
-        /// <param name="inputFile">input file path.</param>
-        /// <param name="outputDir">output folder.</param>
+        /// <param name="splitUnit">Split unit.</param>
+        /// <param name="splitSize">Split size.</param>
+        /// <param name="inputFile">Input file path.</param>
+        /// <param name="outputDir">Output folder.</param>
         private static void SplitFile(string splitUnit, int splitSize, string inputFile, string outputDir)
         {
             bool success = Util.SplitFile(splitUnit, splitSize, inputFile, outputDir);
             if (success)
             {
-                Util.ConsoleOutTextColor(Helper.NeutralFormat("Split file {0} to {1}.", inputFile, outputDir));
+                Helper.PrintSuccessMessage(Helper.NeutralFormat("Split file {0} to {1}.", inputFile, outputDir));
             }
             else
             {
-                Util.ConsoleOutTextColor("Split !");
+                Helper.PrintSuccessMessage("Split !");
             }
         }
     }

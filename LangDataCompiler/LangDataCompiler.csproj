@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(SDROOT)\private\dev\speech\tts\shenzhou\common\Common.Proj.inc" />
+  <!-- <Import Project="$(SDROOT)\private\dev\speech\tts\shenzhou\common\Common.Proj.inc" /> -->
   <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), include.props))\include.props" Condition="'$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), include.props))' != ''" />
   <PropertyGroup>
     <ProductVersion>9.0.30729</ProductVersion>
@@ -75,6 +75,7 @@
       <DestinationFolder>$(BinplaceDistribPath)\dev\tts\$(SPEECH_BUILD_TYPE)\bin\Offline\UnitTest</DestinationFolder>
     </Binplace>
   </ItemGroup>
-  <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" />
-  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), include.targets))\include.targets" Condition="'$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), include.targets))' != ''" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- <Import Project="$(ExtendedTargetsPath)\Microsoft.CSharp.targets" /> -->
+  <!-- <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), include.targets))\include.targets" Condition="'$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), include.targets))' != ''" /> -->
 </Project>

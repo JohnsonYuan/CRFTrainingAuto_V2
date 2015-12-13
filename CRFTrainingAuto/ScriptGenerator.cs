@@ -7,7 +7,6 @@
 //      Generate training or test script
 // </summary>
 //----------------------------------------------------------------------------
-
 namespace CRFTrainingAuto
 {
     using System;
@@ -16,28 +15,41 @@ namespace CRFTrainingAuto
     using System.Linq;
     using System.Xml;
     using Microsoft.Tts.Offline;
+    using Microsoft.Tts.Offline.Utility;
     using Excel = Microsoft.Office.Interop.Excel;
     using SP = Microsoft.Tts.ServiceProvider;
 
     /// <summary>
-    /// Generate action.
+    /// GenerateAction.
     /// </summary>
     public enum GenerateAction
     {
+        /// <summary>
+        /// Test case.
+        /// </summary>
         TestCase,
+
+        /// <summary>
+        /// Training script.
+        /// </summary>
         TrainingScript
     }
 
+    /// <summary>
+    /// Script generator for training and test script.
+    /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
     public class ScriptGenerator
     {
         /// <summary>
         /// Generate training script or test case.
         /// </summary>
-        /// <param name="excelFilePath">excel file path.</param>
-        /// <param name="action">generate training or test script.</param>
-        /// <param name="outputDir">output folder.</param>
-        /// <param name="outputFileName">if not supply, TrainingFileName(training.xml) for training script, TestCaseFileName(testing.xml) for test case.</param>
-        /// <param name="startIndex">training script start index, it could be an path or a number.</param>
+        /// <param name="excelFilePath">Excel file path.</param>
+        /// <param name="action">Generate training or test script.</param>
+        /// <param name="outputDir">Output folder.</param>
+        /// <param name="outputFileName">If not supply, TrainingFileName(training.xml) for training script, TestCaseFileName(testing.xml) for test case.</param>
+        /// <param name="startIndex">Training script start index, it could be an path or a number.</param>
         public static void GenScript(string excelFilePath, GenerateAction action, string outputDir, string outputFileName = null, string startIndex = "")
         {
             // initialize the Excel application Object
@@ -67,17 +79,16 @@ namespace CRFTrainingAuto
                     switch (action)
                     {
                         case GenerateAction.TestCase:
-                            Util.ConsoleOutTextColor("Generate test cases for " + excelFilePath);
-                            
+                            Helper.PrintSuccessMessage("Generate test cases for " + excelFilePath);
+
                             // Generate FM Test Cases, if not supply file name, using TestCaseFileName as default name
                             outputFilePath = Path.Combine(outputDir, outputFileName ?? Util.TestCaseFileName);
 
                             GenRuntimeTestcase(caseAndProns, outputFilePath);
                             break;
                         case GenerateAction.TrainingScript:
-                            
                             // Generate training script, if not supply file name, using TrainingFileName as default name
-                            Util.ConsoleOutTextColor("Generating training script for " + excelFilePath);
+                            Helper.PrintSuccessMessage("Generating training script for " + excelFilePath);
                             outputFilePath = Path.Combine(outputDir, outputFileName ?? Util.TrainingFileName);
 
                             // currently, the 3rd para is always null, if specified, output file's start index continue with existing script file
@@ -132,10 +143,10 @@ namespace CRFTrainingAuto
         ///             <part>d a_h nn_l</part>
         ///        </output>
         ///   </case>
-        /// </cases>
+        /// </cases>.
         /// </example>
-        /// <param name="caseAndPronsWithWb">dictionary contains case and pron and word break result.</param>
-        /// <param name="outputFilePath">output xml file path.</param>
+        /// <param name="caseAndPronsWithWb">Dictionary contains case and pronunciation and word break result.</param>
+        /// <param name="outputFilePath">Output xml file path.</param>
         public static void GenRuntimeTestcase(Dictionary<SentenceAndWBResult, string> caseAndPronsWithWb, string outputFilePath)
         {
             XmlWriterSettings settings = new XmlWriterSettings
@@ -204,7 +215,7 @@ namespace CRFTrainingAuto
             }
 
             // genereate a txt file with same name for clear look
-            File.WriteAllLines(Util.ChangeFileExtension(outputFilePath, Util.TxtFileExtension), caseAndPronsWithWb.Keys.Select(s => s.Content));
+            File.WriteAllLines(Util.GetFilePathWithNewExtension(outputFilePath, Util.TxtFileExtension), caseAndPronsWithWb.Keys.Select(s => s.Content));
 
             Console.WriteLine("Generate test case " + outputFilePath);
         }
@@ -212,8 +223,8 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Generate test case file.
         /// </summary>
-        /// <param name="caseAndProns">dictionary contains case and pron.</param>
-        /// <param name="outputFilePath">output xml file path.</param>
+        /// <param name="caseAndProns">Dictionary contains case and pronunciation.</param>
+        /// <param name="outputFilePath">Output xml file path.</param>
         public static void GenRuntimeTestcase(Dictionary<string, string> caseAndProns, string outputFilePath)
         {
             Dictionary<SentenceAndWBResult, string> caseAndPronsWithWb = new Dictionary<SentenceAndWBResult, string>();
@@ -238,7 +249,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Generate training scirpt, if specify the existing script, output file's start index continue with existing script file.
+        /// Generate training script, if specify the existing script, output file's start index continue with existing script file.
         /// </summary>
         /// <example>
         /// <script language="zh-CN" xmlns="http://schemas.microsoft.com/tts">
@@ -255,11 +266,11 @@ namespace CRFTrainingAuto
         ///   <si id="0000000862">
         ///   ......
         ///   </si>
-        /// </script>
+        /// </script>.
         /// </example>
-        /// <param name="caseAndProns">dictionary contains case and pron.</param>
-        /// <param name="outputFilePath">output xml file path.</param>
-        /// <param name="startIndexOrFilePath">if it is number, then the start index plus 1, if it as an script file path, the start index will be the last item in the script plus 1.</param>
+        /// <param name="caseAndProns">Dictionary contains case and pronunciation.</param>
+        /// <param name="outputFilePath">Output xml file path.</param>
+        /// <param name="startIndexOrFilePath">If it is number, then the start index plus 1, if it as an script file path, the start index will be the last item in the script plus 1.</param>
         public static void GenTrainingScript(Dictionary<string, string> caseAndProns, string outputFilePath, string startIndexOrFilePath = "")
         {
             int startId = 1;
@@ -327,7 +338,7 @@ namespace CRFTrainingAuto
 
             // genereate a txt file with same name for clear look
             File.WriteAllLines(
-                               Util.ChangeFileExtension(outputFilePath, Util.TxtFileExtension),
+                               Util.GetFilePathWithNewExtension(outputFilePath, Util.TxtFileExtension),
                                caseAndProns.Keys);
 
             Console.WriteLine("Generate training script " + outputFilePath);

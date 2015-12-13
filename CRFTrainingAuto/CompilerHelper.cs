@@ -20,17 +20,28 @@ namespace CRFTrainingAuto
     /// <summary>
     /// Compiler helper, compile crf model and general rule.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
     public static class CompilerHelper
     {
+        #region Fields
+
+        // polyrule.txt all >= 0 line
+        private const string PolyRuleDefaultRuleStartTag = "All >= 0 :";
+
+        // use this regex to find rule is used for which word
+        private static Regex _polyRuleKeyLineRegex = new Regex("CurW = \"(.+)\";", RegexOptions.Compiled);
+
+        #endregion
+
         #region Methods
 
         /// <summary>
-        /// CRF compiler
+        /// CRF compiler.
         /// </summary>
-        /// <param name="crfModelDir">crf model folder</param>
-        /// <param name="lang">language</param>
-        /// <param name="crfBinFile">crf bin file path</param>
-        /// <returns>success or not</returns>
+        /// <param name="crfModelDir">Crf model folder.</param>
+        /// <param name="lang">Language.</param>
+        /// <param name="crfBinFile">Crf bin file path.</param>
+        /// <returns>Success or not.</returns>
         public static bool CompileCRF(string crfModelDir, Language lang, out string crfBinFile)
         {
             MemoryStream outputStream = new MemoryStream();
@@ -44,7 +55,7 @@ namespace CRFTrainingAuto
                 {
                     foreach (var error in errorSet.Errors)
                     {
-                        Util.ConsoleOutTextColor(error.ToString());
+                        Helper.PrintSuccessMessage(error.ToString());
                     }
 
                     crfBinFile = null;
@@ -86,8 +97,8 @@ namespace CRFTrainingAuto
         /// General Rule Compiler.
         /// </summary>
         /// <param name="txtPath">Path of txt formatted general rule.</param>
-        /// <param name="tempBinFile">temp binary file path</param>
-        /// <returns>success or not</returns>
+        /// <param name="tempBinFile">Temp binary file path.</param>
+        /// <returns>Success or not.</returns>
         public static bool CompileGeneralRule(string txtPath, out string tempBinFile)
         {
             MemoryStream outputStream = new MemoryStream();
@@ -120,7 +131,6 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Update polyrule.txt for specific char
         /// Delete "All >= 0" line if polyrule.txt file contains
-        /// 
         /// polyrule.txt is like below, we should remove All >= 0 : "b eh_h i_l"; to make CRF model working
         /// [domain=address]
         /// CurW = "背";
@@ -128,9 +138,9 @@ namespace CRFTrainingAuto
         /// PrevW = "越" : "b eh_h i_h";
         /// All >= 0 : "b eh_h i_l";.
         /// </summary>
-        /// <param name="filePath">poly rule file path.</param>
-        /// <param name="charName">char name.</param>
-        /// <returns>true if updated, false not changed.</returns>
+        /// <param name="filePath">Poly rule file path.</param>
+        /// <param name="charName">Char name.</param>
+        /// <returns>True if updated, false not changed.</returns>
         public static bool UpdatePolyRuleFile(string filePath, string charName)
         {
             Helper.ThrowIfFileNotExist(filePath);
@@ -139,12 +149,9 @@ namespace CRFTrainingAuto
             int lineNumber = 0;
 
             bool foundTargetChar = false;
-
+            bool isNeedModify = false;
             bool currentCharHasDomainAttr = false;
-            string currentChar = "";
-
-            // use this regex to find rule is used for which word
-            Regex rxChar = new Regex("CurW = \"(.+)\";", RegexOptions.Compiled);
+            string currentChar;
 
             using (StreamReader reader = new StreamReader(filePath))
             {
@@ -163,15 +170,9 @@ namespace CRFTrainingAuto
                     {
                         currentCharHasDomainAttr = true;
                     }
-                    else if (rxChar.IsMatch(lineContent))
+                    else if (_polyRuleKeyLineRegex.IsMatch(lineContent))
                     {
-                        // we don't need to iterate again if meet the next char
-                        if (foundTargetChar)
-                        {
-                            return false;
-                        }
-
-                        currentChar = rxChar.Match(lineContent).Groups[1].Value;
+                        currentChar = _polyRuleKeyLineRegex.Match(lineContent).Groups[1].Value;
 
                         // if current rule is for training char and this is an general rule
                         if (string.Equals(currentChar, charName, StringComparison.Ordinal) &&
@@ -186,21 +187,26 @@ namespace CRFTrainingAuto
                     else if (foundTargetChar)
                     {
                         // update poly rule file the target char's general rule contains All >= 0
-                        if (lineContent.StartsWith("All >= 0 :", StringComparison.OrdinalIgnoreCase))
+                        if (lineContent.StartsWith(PolyRuleDefaultRuleStartTag, StringComparison.OrdinalIgnoreCase))
                         {
-                            string message;
-
-                            // remove All >= 0 line in poly rule file
-                            SdCommand.SdCheckoutFile(filePath, out message);
-                            Util.ConsoleOutTextColor(message);
-
-                            reader.Dispose();
-
-                            Util.EditLineInFile(filePath, lineNumber, null);
-                            return true;
+                            isNeedModify = true;
+                            break;
                         }
                     }
                 }
+            }
+
+            if (isNeedModify)
+            {
+                string message;
+
+                SdCommand.SdCheckoutFile(filePath, out message);
+                Helper.PrintSuccessMessage(message);
+
+                // remove All >= 0 line in poly rule file
+                Util.EditLineInFile(filePath, lineNumber, null);
+
+                return true;
             }
 
             return false;
@@ -210,26 +216,24 @@ namespace CRFTrainingAuto
         /// Load CRF model name mapping(model name and localized name).
         /// </summary>
         /// <example>
-        /// The mapping txt file is like this:
-        /// 
-        /// Map between polyphony model:
-        /// 差	->	cha.crf	Being_used
-        /// 长	->	chang.crf	Being_used
-        /// 当	->	dang.crf	Being_used
-        /// 行	->	hang.crf	Being_used
-        /// 系	->	xi.crf	Unused.
+        /// The mapping txt file is like below:
+        /// 差 -> cha.crf Being_used
+        /// 长 -> chang.crf Being_used
+        /// 当 -> dang.crf Being_used
+        /// 行 -> hang.crf Being_used
+        /// 系 -> xi.crf Unused.
         /// </example>
-        /// <param name="filePath">crf mapping File Path.</param>
-        /// <param name="crfFileName">crf file name.</param>
-        /// <param name="usingInfo">check the char whether to be used, in mapping file "Being_used" or "Unused".</param>
-        /// <returns>crf model files array, like bei.crf, wei.crf.</returns>
+        /// <param name="filePath">Crf mapping File Path.</param>
+        /// <param name="crfFileName">Crf file name.</param>
+        /// <param name="usingInfo">Check the char whether to be used, in mapping file "Being_used" or "Unused".</param>
+        /// <returns>Crf model files array, like bei.crf, wei.crf.</returns>
         public static string[] UpdateCRFModelMappingFile(string filePath, string crfFileName, string usingInfo)
         {
             Helper.ThrowIfFileNotExist(filePath);
 
             string message;
             SdCommand.SdCheckoutFile(filePath, out message);
-            Util.ConsoleOutTextColor(message);
+            Helper.PrintSuccessMessage(message);
 
             if (!string.Equals(usingInfo, "Being_used") && !string.Equals(usingInfo, "Unused"))
             {
@@ -286,7 +290,6 @@ namespace CRFTrainingAuto
                         }
 
                         crfFileNames.Add(currentCRFFile);
-
                     }
                     ++lineNumber;
                 }

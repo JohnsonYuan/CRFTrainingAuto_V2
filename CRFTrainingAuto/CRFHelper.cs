@@ -13,11 +13,11 @@ namespace CRFTrainingAuto
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Text.RegularExpressions;
+    using System.Threading.Tasks;
     using System.Xml;
     using Microsoft.Tts.Offline;
     using Microsoft.Tts.Offline.Utility;
-    using System.Text.RegularExpressions;
-    using System.Threading.Tasks;
 
     /// <summary>
     /// Sentence and word break result struct.
@@ -25,31 +25,36 @@ namespace CRFTrainingAuto
     public struct SentenceAndWBResult
     {
         public string Content { get; set; }
+
         public string[] WBResult { get; set; }
     }
 
     /// <summary>
-    /// CRF Helper.
+    /// CRF helper class.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
     public class CrfHelper
     {
         #region Fields
 
-        private object _locker = new object();
-        private static int ProcessedFileCount = 0;
+        private static int _processedFileCount = 0;
 
+        private object _locker = new object();
         #endregion
 
         #region Methods
 
         /// <summary>
-        /// Step 1: Generate txt file contains single training char from inFolder
+        /// Prepare train test set
+        /// Generate txt file contains single training char from inFolder
         /// First generate each file corresponding file to temp folder
         /// and then merge them, random select maxCount data.
         /// </summary>
-        /// <param name="inputDir">corpus folder.</param>
-        /// <param name="outputDir">output folder.</param>
-        /// <param name="wbDir">corpus word break result folder.</param>
+        /// <param name="inputDir">Corpus folder.</param>
+        /// <param name="outputDir">Output folder.</param>
+        /// <param name="wbDir">Corpus Word break result folder.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
         public void PrepareTrainTestSet(string inputDir, string outputDir, string wbDir = null)
         {
             if (!Directory.Exists(inputDir))
@@ -80,7 +85,7 @@ namespace CRFTrainingAuto
                 tasks = new Task[LocalConfig.Instance.MaxThreadCount];
             }
 
-            Util.ConsoleOutTextColor("Start filtering");
+            Helper.PrintSuccessMessage("Start filtering");
 
             for (int i = 0; i < tasks.Length; i++)
             {
@@ -88,19 +93,19 @@ namespace CRFTrainingAuto
 
                 // start each task nad show process info when this task complete
                 tasks[i] = Task.Factory.StartNew(() =>
-                        {
-                            SelectTargetChar(filesToProcess, tempFolder, wbDir);
-                        }
-                    ).ContinueWith((ancient) =>
                     {
-                        Console.WriteLine(Helper.NeutralFormat("Processed {0} files, total {1} files", ProcessedFileCount, inFilePaths.Length));
+                        SelectTargetChar(filesToProcess, tempFolder, wbDir);
+                    })
+                    .ContinueWith((ancient) =>
+                    {
+                        Console.WriteLine(Helper.NeutralFormat("Processed {0} files, total {1} files", _processedFileCount, inFilePaths.Length));
                     });
             }
 
             Task.WaitAll(tasks);
 
             // clear counter
-            ProcessedFileCount = 0;
+            _processedFileCount = 0;
 
             MergeAndRandom(tempFolder, outputDir);
         }
@@ -111,10 +116,12 @@ namespace CRFTrainingAuto
         /// input file might like:羊城晚报记者林本剑本文来源：金羊网-羊城晚报
         /// word break file might like:羊城 晚报 记者 林 本 剑 本文 来源 ： 金 羊 网 - 羊城 晚报.
         /// </summary>
-        /// <param name="fileProcessed">files corpus.</param>
-        /// <param name="outputFolder">temp folder.</param>
-        /// <param name="wbDir">word break result folder.</param>
-        private void SelectTargetChar(string[] fileProcessed, string outputDir, string wbDir = null)
+        /// <param name="fileProcessed">Corpus files to be processed.</param>
+        /// <param name="outputDir">Temp output folder.</param>
+        /// <param name="wbDir">Word break result folder.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
+        public void SelectTargetChar(string[] fileProcessed, string outputDir, string wbDir = null)
         {
             bool useWbResult = false;
             if (!string.IsNullOrEmpty(wbDir) &&
@@ -136,7 +143,7 @@ namespace CRFTrainingAuto
                 {
                     lock (_locker)
                     {
-                        ++ProcessedFileCount;
+                        ++_processedFileCount;
                     }
 
                     Console.WriteLine("File " + fileName + " exist, skipped!");
@@ -148,6 +155,7 @@ namespace CRFTrainingAuto
                 int foundCount = 0;
 
                 StreamReader fileReader = null;
+
                 // reader for word break result file
                 StreamReader wbReader = null;
 
@@ -168,9 +176,11 @@ namespace CRFTrainingAuto
 
                     while (fileReader.Peek() > -1)
                     {
-                        #region filter data
+                        ////#region filter data
+
                         // remove the empty space, if not, it will get the wrong index when using WordBraker to get the char index
-                        string sentence = fileReader.ReadLine().Trim().Replace(" ", "").Replace("\t", "");
+                        // don't need to remove empty part, we can use word break result to restore the string, it will not contain any space
+                        string sentence = fileReader.ReadLine().Trim();
 
                         bool isSentenceMatch = false;
                         string[] wbResult = null;
@@ -212,10 +222,12 @@ namespace CRFTrainingAuto
                         if (isSentenceMatch)
                         {
                             results.Add(sentence);
+
                             // add the word break result
                             results.Add(wbResult.SpaceSeparate());
 
                             ++foundCount;
+
                             // show searching progress, i is start with 0, so ShowTipCount should minus 1
                             // if ShowTipCount = 5000, when i = 4999, 5000 cases searched
                             if (LocalConfig.Instance.ShowTipCount > 0 &&
@@ -226,7 +238,7 @@ namespace CRFTrainingAuto
                             }
                         }
 
-                        #endregion
+                        ////#endregion
                     }
 
                     // save each file to Temp folder, cause the total file is so large, then merge
@@ -234,7 +246,7 @@ namespace CRFTrainingAuto
 
                     lock (_locker)
                     {
-                        ++ProcessedFileCount;
+                        ++_processedFileCount;
                     }
 
                     Console.WriteLine(Helper.NeutralFormat("Found {0} results in file {1}.", foundCount, fileName));
@@ -250,6 +262,7 @@ namespace CRFTrainingAuto
                     {
                         fileReader.Dispose();
                     }
+
                     if (wbReader != null)
                     {
                         wbReader.Dispose();
@@ -262,14 +275,14 @@ namespace CRFTrainingAuto
         /// Generate maxCount(default 1500) random data from inFilePath
         /// e.g. generate file corpus.1500.txt .
         /// </summary>
-        /// <param name="inFilePath">intput file path.</param>
-        /// <param name="outputDir">output folder.</param>
-        /// <returns>generated excel file path, return null if not success.</returns>
+        /// <param name="inFilePath">Input file path.</param>
+        /// <param name="outputDir">Output folder.</param>
+        /// <returns>Generated excel file path, return null if not success.</returns>
         public string SelectRandomCorpus(string inFilePath, string outputDir)
         {
             var inputs = Util.GetSenAndWbFromCorpus(inFilePath);
 
-            // check whether can random select
+            // check whether can random select   
             if (inputs.Count < LocalConfig.Instance.MaxCaseCount)
             {
                 return null;
@@ -313,14 +326,14 @@ namespace CRFTrainingAuto
             return outputExcelFilePath;
         }
 
-        ///<summary>
-        /// Step 2: Generate NCrossData from excel
+        /// <summary>
+        /// Generate NCrossData from excel
         /// First divide excelFile using N cross folder
         /// each folder contains 900 cases training.xls and 100 cases testing.xls
-        /// and then generate training and test script from corresponding excel files
+        /// and then generate training and test script from corresponding excel files.
         /// </summary>
-        /// <param name="excelFile">excel file path</param>
-        /// <param name="outputDir">output folder</outputDir>
+        /// <param name="excelFile">Excel file path.</param>
+        /// <param name="outputDir">Output folder.</param>
         public void GenNCrossData(string excelFile, string outputDir)
         {
             // divide corpus to training and test part, use 
@@ -332,7 +345,7 @@ namespace CRFTrainingAuto
             Helper.ThrowIfNull(trainingExcelFilePath);
             Helper.ThrowIfNull(testExcelFilePath);
 
-            #region put the 1000 training, and 500 test case to FinalResultFolder
+            ////#region put the 1000 training, and 500 test case to FinalResultFolder
 
             string finalFolder = Path.Combine(outputDir, Util.FinalResultFolderName);
             if (!Directory.Exists(finalFolder))
@@ -361,15 +374,15 @@ namespace CRFTrainingAuto
             // comple and run test
             CompileAndTestInFolder(finalFolder);
 
-            #endregion
+            ////#endregion
 
             // save the n cross test data to NCrossFolder
             string nCrossFolder = Path.Combine(outputDir, Util.NCrossFolderName);
 
             // divide training excel file corpus to 10 separate testing and training part
-            Util.ConsoleOutTextColor("Start N Cross excel " + trainingExcelFilePath);
+            Helper.PrintSuccessMessage("Start N Cross excel " + trainingExcelFilePath);
             ExcelHelper.GenNCrossExcel(trainingExcelFilePath, nCrossFolder);
-            Util.ConsoleOutTextColor("End N Cross excel " + trainingExcelFilePath);
+            Helper.PrintSuccessMessage("End N Cross excel " + trainingExcelFilePath);
 
             string[] testlogPaths = new string[LocalConfig.Instance.NFolderCount];
 
@@ -385,7 +398,7 @@ namespace CRFTrainingAuto
                 }
                 catch (Exception ex)
                 {
-                    Util.ConsoleOutTextColor(ex.Message, ConsoleColor.Red);
+                    Helper.PrintColorMessageToOutput(ConsoleColor.Red, ex.Message);
                     return;
                 }
             }
@@ -393,14 +406,14 @@ namespace CRFTrainingAuto
             // generate report based NCross test log
             string testReportPath = Path.Combine(outputDir, Util.TestReportFileName);
             GenNCrossTestReport(testlogPaths, testReportPath);
-            Util.ConsoleOutTextColor("Generate test report " + testReportPath);
+            Helper.PrintSuccessMessage("Generate test report " + testReportPath);
         }
 
         /// <summary>
-        /// Verify the excel file's pron by compile and test all cases in excel.
+        /// Verify the excel file's pronunciation by compile and test all cases in excel.
         /// </summary>
-        /// <param name="excelFile">excel file path.</param>
-        /// <param name="outputDir">output folder.</param>
+        /// <param name="excelFile">Excel file path.</param>
+        /// <param name="outputDir">Output folder.</param>
         public void GenVerifyResult(string excelFile, string outputDir)
         {
             // put the result to VerifyResultFolder
@@ -420,7 +433,7 @@ namespace CRFTrainingAuto
                 Directory.CreateDirectory(trainingFolder);
             }
 
-            Util.ConsoleOutTextColor(Helper.NeutralFormat("Start verify excel {0}, result will be saved to {1}.", excelFile, verifyResultFolder));
+            Helper.PrintSuccessMessage(Helper.NeutralFormat("Start verify excel {0}, result will be saved to {1}.", excelFile, verifyResultFolder));
 
             ScriptGenerator.GenScript(excelFile, GenerateAction.TrainingScript, trainingFolder, Util.TrainingFileName);
             ScriptGenerator.GenScript(excelFile, GenerateAction.TestCase, verifyResultFolder, Util.TestCaseFileName);
@@ -430,43 +443,44 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Merge files and random select.
         /// </summary>
-        /// <param name="inputDir">input folder.</param>
-        /// <param name="outputDir">output folder.</param>
+        /// <param name="inputDir">Input folder.</param>
+        /// <param name="outputDir">Output folder.</param>
         public void MergeAndRandom(string inputDir, string outputDir)
         {
-            Util.ConsoleOutTextColor("Start merge files in " + inputDir + " !");
+            Helper.PrintSuccessMessage("Start merge files in " + inputDir + " !");
 
             // e.g. corpusAllFilePath = "corpus.all.txt"
             string corpusAllFilePath = Path.Combine(outputDir, Util.CorpusTxtAllFileName);
+
             // merge all files in temp folder
             int mergedFileCount = Util.MergeFiles(Path.Combine(inputDir, Util.CorpusTxtFileSearchPattern), corpusAllFilePath);
 
             if (mergedFileCount == 0)
             {
-                Util.ConsoleOutTextColor("No data generated, ternimated!");
+                Helper.PrintSuccessMessage("No data generated, ternimated!");
                 return;
             }
 
-            Util.ConsoleOutTextColor(Helper.NeutralFormat("All cases saved to {0}.", corpusAllFilePath));
+            Helper.PrintSuccessMessage(Helper.NeutralFormat("All cases saved to {0}.", corpusAllFilePath));
 
-            Util.ConsoleOutTextColor(Helper.NeutralFormat("Start random select {0} cases from {1}", LocalConfig.Instance.MaxCaseCount, corpusAllFilePath));
+            Helper.PrintSuccessMessage(Helper.NeutralFormat("Start random select {0} cases from {1}", LocalConfig.Instance.MaxCaseCount, corpusAllFilePath));
 
             string outputExcelFilePath = SelectRandomCorpus(corpusAllFilePath, outputDir);
             if (!string.IsNullOrEmpty(outputExcelFilePath))
             {
-                Util.ConsoleOutTextColor(Helper.NeutralFormat("Random select {0} cases, saved to {1}", LocalConfig.Instance.MaxCaseCount, outputExcelFilePath));
+                Helper.PrintSuccessMessage(Helper.NeutralFormat("Random select {0} cases, saved to {1}", LocalConfig.Instance.MaxCaseCount, outputExcelFilePath));
             }
             else
             {
-                Util.ConsoleOutTextColor(Helper.NeutralFormat("{0} doesn't contains {1}  data, can't generate random data.", corpusAllFilePath, LocalConfig.Instance.MaxCaseCount));
+                Helper.PrintSuccessMessage(Helper.NeutralFormat("{0} doesn't contains {1}  data, can't generate random data.", corpusAllFilePath, LocalConfig.Instance.MaxCaseCount));
             }
         }
 
         /// <summary>
         /// Compile and run test in folder.
         /// </summary>
-        /// <param name="destDir">folder.</param>
-        /// <param name="genExcelReport">if true, genereate the excel report based on test result.</param>
+        /// <param name="destDir">Destination Folder.</param>
+        /// <param name="genExcelReport">If true, generate the excel report based on test result.</param>
         public void CompileAndTestInFolder(string destDir, bool genExcelReport = false)
         {
             // generate ing.config and feature.config for crf training
@@ -477,43 +491,43 @@ namespace CRFTrainingAuto
             if (!Directory.Exists(trainingFolder)
                 || Directory.GetFiles(trainingFolder, Util.XmlFileSearchExtension).Count() <= 0)
             {
-                Util.ConsoleOutTextColor(Helper.NeutralFormat("{0} doesn't exist or doesn't contains training scripts.", trainingFolder), ConsoleColor.Red);
+                Helper.PrintColorMessageToOutput(ConsoleColor.Red, Helper.NeutralFormat("{0} doesn't exist or doesn't contains training scripts.", trainingFolder));
                 return;
             }
 
-            Util.ConsoleOutTextColor("Training crf model in " + destDir);
-            string message = "";
+            Helper.PrintSuccessMessage("Training crf model in " + destDir);
+            string message = string.Empty;
 
             if (TrainingCRFModel(Path.Combine(destDir, Util.TrainingConfigFileName),
                 Path.Combine(destDir, "traininglog", "log.xml"),
                 ref message))
             {
-                Util.ConsoleOutTextColor(message);
+                Helper.PrintSuccessMessage(message);
             }
             else
             {
                 throw new Exception(message);
             }
 
-            Util.ConsoleOutTextColor("Compiling language data " + destDir);
+            Helper.PrintSuccessMessage("Compiling language data " + destDir);
             string generatedCrf = Path.Combine(destDir, LocalConfig.Instance.OutputCRFName);
-
             string generatedDataFile;
+
             // compile lang  data file
             if (CompileLangData(generatedCrf, LocalConfig.Instance.CRFModelDir, destDir, out generatedDataFile))
             {
-                Util.ConsoleOutTextColor("Successful compile " + generatedDataFile);
+                Helper.PrintSuccessMessage("Successful compile " + generatedDataFile);
             }
             else
             {
-                Util.ConsoleOutTextColor("Compile failed in" + destDir, ConsoleColor.Red);
+                Helper.PrintColorMessageToOutput(ConsoleColor.Red, "Compile failed in" + destDir);
                 return;
             }
 
             string testcaseFile = Path.Combine(destDir, Util.TestCaseFileName);
             if (File.Exists(testcaseFile))
             {
-                Util.ConsoleOutTextColor("Running test " + testcaseFile);
+                Helper.PrintSuccessMessage("Running test " + testcaseFile);
 
                 string testLogFile = Path.Combine(destDir, Util.TestlogFileName);
                 if (TestCRFModel(generatedDataFile,
@@ -521,7 +535,7 @@ namespace CRFTrainingAuto
                     testLogFile,
                     ref message))
                 {
-                    Util.ConsoleOutTextColor(message);
+                    Helper.PrintSuccessMessage(message);
 
                     // test with the original dat file
                     if (TestCRFModel(LocalConfig.Instance.LangDataPath,
@@ -529,19 +543,19 @@ namespace CRFTrainingAuto
                         Path.Combine(destDir, Util.TestlogBeforeFileName),
                         ref message))
                     {
-                        Util.ConsoleOutTextColor(message);
+                        Helper.PrintSuccessMessage(message);
                     }
 
                     // genereate excel report
                     if (genExcelReport)
                     {
-                        Util.ConsoleOutTextColor("Genereating excel test result");
+                        Helper.PrintSuccessMessage("Genereating excel test result");
                         ExcelHelper.GenExcelTestReport(testLogFile);
                     }
                 }
                 else
                 {
-                    Util.ConsoleOutTextColor(message, ConsoleColor.Red);
+                    Helper.PrintColorMessageToOutput(ConsoleColor.Red, message);
                     return;
                 }
             }
@@ -550,9 +564,9 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Generate training script to training folder and recompile and rerun the test and generate report.
         /// </summary>
-        /// <param name="bugFixingFilePath">bug fixing file (tab separate each line)
-        /// 我还差你五元钱。	cha4
-        /// 我们离父母的希望还差很远。	cha4 .
+        /// <param name="bugFixingFilePath">Bug fixing file (tab separate each line)
+        /// 我还差你五元钱。cha4
+        /// 我们离父母的希望还差很远。cha4.
         /// </param>
         /// <param name="outputDir">Parent folder that contains TrainingScript folder.</param>
         public void AppendTrainingScriptAndReRunTest(string bugFixingFilePath, string outputDir)
@@ -581,6 +595,7 @@ namespace CRFTrainingAuto
             }
 
             XmlScriptFile results = new XmlScriptFile(LocalConfig.Instance.Lang);
+
             // append the cases
             var senAndProns = Util.GetSenAndPronFromBugFixingFile(bugFixingFilePath);
 
@@ -652,7 +667,7 @@ namespace CRFTrainingAuto
 
             if (File.Exists(generatedDatFile))
             {
-                string message = "";
+                string message = string.Empty;
 
                 // test with the original dat file
                 if (TestCRFModel(generatedDatFile,
@@ -660,17 +675,16 @@ namespace CRFTrainingAuto
                     Path.Combine(outputDir, Util.BugFixingTestLogFileName),
                     ref message))
                 {
-                    Util.ConsoleOutTextColor(message);
+                    Helper.PrintSuccessMessage(message);
                 }
             }
         }
 
         /// <summary>
-        /// Generate report from all testResults
+        /// Generate report from all testResults.
         /// </summary>
         /// <example>
-        /// frontmeasure test report is like below, Match Ratio          = 92.00 it the redio result line
-        /// 
+        /// Frontmeasure test report is like below, Match Ratio          = 92.00 it the redio result line
         /// POLYPHONE: 弹
         /// INPUT: (P1)
         /// 我曾经三次上战场，我上去是要带着光荣弹，最后一颗子弹留给自己的，这绝对的牺牲，这点是西方军队比不了的。
@@ -678,7 +692,6 @@ namespace CRFTrainingAuto
         /// d a_h nn_l / 
         /// RESULT: 
         /// t a_l nn_h / 
-        /// 
         /// Test result of component: Pronunciation
         /// Test language: ZhCN
         /// Total Speak                = 100
@@ -687,8 +700,9 @@ namespace CRFTrainingAuto
         /// Total Error          = 0
         /// Match Ratio          = 92.00.
         /// </example>
-        /// <param name="testResultFiles">test result files.</param>
-        /// <param name="outputFilePath">output file path.</param>
+        /// <param name="testResultFiles">Test result files.</param>
+        /// <param name="outputFilePath">Output file path.</param>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
         public void GenNCrossTestReport(string[] testResultFiles, string outputFilePath)
         {
             if (testResultFiles == null ||
@@ -708,18 +722,20 @@ namespace CRFTrainingAuto
                     while (reader.Peek() > -1)
                     {
                         string line = reader.ReadLine();
+
                         // find the the radio result line
                         Match match = Regex.Match(line, @"(?:Match Ratio *= )(\d+\.\d+)");
                         if (match.Success)
                         {
                             try
                             {
-                                radios[i] = Double.Parse(match.Groups[1].Value);
+                                radios[i] = double.Parse(match.Groups[1].Value);
                             }
                             catch
                             {
                                 throw new Exception("Report format is not correct!");
                             }
+
                             break;
                         }
                     }
@@ -738,7 +754,7 @@ namespace CRFTrainingAuto
                 reportResults.Add(Helper.NeutralFormat("Set{0}\t{1}\t{2}\t{3:00.00}\t{4:00.00}", i, trainCount, testCount, radios[i - 1], diff));
             }
 
-            reportResults.Add("");
+            reportResults.Add(string.Empty);
             reportResults.Add(Helper.NeutralFormat("Average radio: {0:00.00}", aveRadio));
 
             File.WriteAllLines(outputFilePath, reportResults);
@@ -747,17 +763,17 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Using ProsodyModelTrainer.exe to train crf.
         /// </summary>
-        /// <param name="configPath">training config file path.</param>
-        /// <param name="logPath">training xml file log.</param>
-        /// <param name="message">result message.</param>
-        /// <returns>success or not.</returns>
+        /// <param name="configPath">Training config file path.</param>
+        /// <param name="logPath">Training xml file log.</param>
+        /// <param name="message">Result message.</param>
+        /// <returns>Success or not.</returns>
         public bool TrainingCRFModel(string configPath, string logPath, ref string message)
         {
             string sdMsg = string.Empty;
 
             try
             {
-                Int32 sdExitCode = CommandLine.RunCommandWithOutputAndError(Util.ProsodyModelTrainerPath,
+                int sdExitCode = CommandLine.RunCommandWithOutputAndError(Util.ProsodyModelTrainerPath,
                         Helper.NeutralFormat("-config {0} -log {1}", configPath, logPath), null, ref sdMsg);
 
                 if (sdExitCode == 0 && !string.IsNullOrEmpty(sdMsg))
@@ -767,6 +783,7 @@ namespace CRFTrainingAuto
                     // renaming the trained file, because the trained file name is like 2052.TD
                     XmlDocument doc = new XmlDocument();
                     doc.Load(configPath);
+
                     // currently the namespace is http://schemas.microsoft.com/tts/toolsuite
                     XmlNamespaceManager nsmgr = new XmlNamespaceManager(doc.NameTable);
                     nsmgr.AddNamespace("ns", Util.TrainingConfigNamespace);
@@ -801,13 +818,14 @@ namespace CRFTrainingAuto
             {
                 message = Helper.NeutralFormat("--{0}. Failed to training : {1}", e.Message, logPath);
             }
+
             return false;
         }
 
         /// <summary>
-        /// Generate corresponding training.config and feature.config outputDir
+        /// Generate corresponding training.config and feature.config outputDir.
         /// </summary>
-        /// <param name="configTemplateDir">dir contains training.config and feature.config template</param>
+        /// <param name="outputDir">Output folder.</param>
         public void GenCRFTrainingConfig(string outputDir)
         {
             XmlDocument doc = new XmlDocument();
@@ -852,13 +870,15 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Compile data file.
         /// </summary>
-        /// <param name="crfFilePath">trained crf file.</param>
-        /// <param name="crfModelDir">crf model folder.</param>
-        /// <param name="outputDir">data file output folder.</param>
-        /// <param name="generatedFilePath">generated dat file path.</param>
+        /// <param name="crfFilePath">Trained crf file.</param>
+        /// <param name="crfModelDir">Crf model folder.</param>
+        /// <param name="outputDir">Data file output folder.</param>
+        /// <param name="generatedFilePath">Generated dat file path.</param>
+        /// <returns>Compile success or not.</returns>
         public bool CompileLangData(string crfFilePath, string crfModelDir, string outputDir, out string generatedFilePath)
         {
             string message;
+
             // use the langDataPath
             string srcDataFilePath = LocalConfig.Instance.LangDataPath;
 
@@ -885,7 +905,7 @@ namespace CRFTrainingAuto
             // copy dat file to current output folder
             File.Copy(srcDataFilePath, generatedFilePath, true);
 
-            #region copy trained crf file to crfModel folder to compile temp bin file
+            ////#region copy trained crf file to crfModel folder to compile temp bin file
 
             string destCrfFilePath = Path.Combine(crfModelDir, Path.GetFileName(crfFilePath));
             fi = new FileInfo(destCrfFilePath);
@@ -896,7 +916,7 @@ namespace CRFTrainingAuto
             if (isDestCrfExist && fi.IsReadOnly)
             {
                 SdCommand.SdCheckoutFile(destCrfFilePath, out message);
-                Util.ConsoleOutTextColor(message);
+                Helper.PrintSuccessMessage(message);
             }
 
             File.Copy(crfFilePath, Path.Combine(crfModelDir, Path.GetFileName(crfFilePath)), true);
@@ -905,12 +925,12 @@ namespace CRFTrainingAuto
             if (!isDestCrfExist)
             {
                 SdCommand.SdAddFile(destCrfFilePath, out message);
-                Util.ConsoleOutTextColor(message);
+                Helper.PrintSuccessMessage(message);
             }
 
-            #endregion
+            ////#endregion
 
-            #region Update CRFLocalizedMapping.txt file and check CRF model folder
+            ////#region Update CRFLocalizedMapping.txt file and check CRF model folder
 
             string crfMappingFilePath = Path.Combine(new DirectoryInfo(crfModelDir).Parent.FullName, "CRFLocalizedMapping.txt");
 
@@ -931,14 +951,14 @@ namespace CRFTrainingAuto
                 }
             }
 
-            #endregion
+            ////#endregion
 
-            #region Compile
+            ////#region Compile
 
             string tempBinFile;
 
             // compile polyrule.txt if update polyrule.txt file
-            if(CompilerHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, LocalConfig.Instance.CharName))
+            if (CompilerHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, LocalConfig.Instance.CharName))
             {
                 if (!CompilerHelper.CompileGeneralRule(LocalConfig.Instance.PolyRuleFilePath, out tempBinFile))
                 {
@@ -968,7 +988,7 @@ namespace CRFTrainingAuto
             // delete the temp file
             File.Delete(tempBinFile);
 
-            #endregion
+            ////#endregion
 
             return File.Exists(generatedFilePath);
         }
@@ -977,7 +997,11 @@ namespace CRFTrainingAuto
         /// Use FrontendMeasure to test testcaseFile and results saved to outputPath
         /// FrontendMeasure.exe -mode runtest -log "[path]\log.txt" -x "[path]\test.xml".
         /// </summary>
-        /// <param name="logPath">fm result file.</param>
+        /// <param name="srcDatFile">Source dat flie path.</param>
+        /// <param name="testcaseFile">Test case file path.</param>
+        /// <param name="logPath">Test result file path.</param>
+        /// <param name="message">Output message.</param>
+        /// <returns>Test success or not.</returns>
         public bool TestCRFModel(string srcDatFile, string testcaseFile, string logPath, ref string message)
         {
             string sdMsg = string.Empty;
@@ -1051,10 +1075,10 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Genereate word break result for each file
+        /// Genereate word break result for each file.
         /// </summary>
-        /// <param name="wildcard">input file path, like "D:\corpus\*.txt"</param>
-        /// <param name="outputDir">output folder</param>
+        /// <param name="wildcard">Input file path, like "D:\corpus\*.txt".</param>
+        /// <param name="outputDir">Output folder.</param>
         public void DoWordBreak(string wildcard, string outputDir)
         {
             string[] inFilePaths = Util.GetAllFiles(wildcard);
@@ -1073,7 +1097,7 @@ namespace CRFTrainingAuto
                 tasks = new Task[LocalConfig.Instance.MaxThreadCount];
             }
 
-            Util.ConsoleOutTextColor("Start word breaking");
+            Helper.PrintSuccessMessage("Start word breaking");
 
             for (int i = 0; i < tasks.Length; i++)
             {
@@ -1083,22 +1107,21 @@ namespace CRFTrainingAuto
                 tasks[i] = Task.Factory.StartNew(() =>
                         {
                             WordBreakFiles(filesToProcess, outputDir);
-                        }
-                    ).ContinueWith((ancient) =>
+                        })
+                        .ContinueWith((ancient) =>
                         {
-                            Console.WriteLine(Helper.NeutralFormat("Processed {0} files, total {1} files", ProcessedFileCount, inFilePaths.Length));
-                        }
-                    );
+                            Console.WriteLine(Helper.NeutralFormat("Processed {0} files, total {1} files", _processedFileCount, inFilePaths.Length));
+                        });
             }
 
             Task.WaitAll(tasks);
         }
 
         /// <summary>
-        /// Word break each file
+        /// Word break each file.
         /// </summary>
-        /// <param name="fileProcessed">files to be processed</param>
-        /// <param name="outputDir">output folder</param>
+        /// <param name="fileProcessed">Files to be processed.</param>
+        /// <param name="outputDir">Output folder.</param>
         private void WordBreakFiles(string[] fileProcessed, string outputDir)
         {
             using (WordBreaker wordBreaker = new WordBreaker(LocalConfig.Instance))
@@ -1113,7 +1136,7 @@ namespace CRFTrainingAuto
                     {
                         lock (_locker)
                         {
-                            ++ProcessedFileCount;
+                            ++_processedFileCount;
                         }
 
                         Console.WriteLine("File " + fileName + " exist, skipped!");
@@ -1127,7 +1150,7 @@ namespace CRFTrainingAuto
                     {
                         while (reader.Peek() > -1)
                         {
-                            string sentence = reader.ReadLine().Replace(" ", "").Replace("\t", "");
+                            string sentence = reader.ReadLine().Trim();
 
                             if (string.IsNullOrEmpty(sentence))
                             {
@@ -1155,7 +1178,7 @@ namespace CRFTrainingAuto
 
                     lock (_locker)
                     {
-                        ++ProcessedFileCount;
+                        ++_processedFileCount;
                     }
                 }
             }
