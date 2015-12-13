@@ -20,6 +20,7 @@ namespace CRFTrainingAuto
     /// <summary>
     /// Compiler helper, compile crf model and general rule.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
     public static class CompilerHelper
     {
@@ -34,6 +35,43 @@ namespace CRFTrainingAuto
         #endregion
 
         #region Methods
+
+        /// <summary>
+        /// Compile dat file.
+        /// </summary>
+        /// <param name="configFilePath">Compile config file path.</param>
+        /// <param name="message">Compile result message.</param>
+        /// <returns>Success or not.</returns>
+        public static bool CompileAll(string configFilePath, out string message)
+        {
+            string sdMsg = string.Empty;
+
+            try
+            {
+                int sdExitCode = CommandLine.RunCommandWithOutputAndError(
+                                                "langdatacompiler.exe",
+                                                Helper.NeutralFormat("add {0}"),
+                                                Directory.GetCurrentDirectory(),
+                                                ref sdMsg);
+
+                if (sdExitCode == 0)
+                {
+                    message = Helper.NeutralFormat("Compile succeed.");
+                }
+                else
+                {
+                    message = Helper.NeutralFormat("Failed to compile! {0}", sdMsg);
+                    return false;
+                }
+            }
+            catch (Exception e)
+            {
+                message = Helper.NeutralFormat("{0}. Failed to compile", e.Message);
+                return false;
+            }
+
+            return true;
+        }
 
         /// <summary>
         /// CRF compiler.

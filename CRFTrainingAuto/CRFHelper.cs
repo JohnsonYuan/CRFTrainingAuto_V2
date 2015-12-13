@@ -960,6 +960,17 @@ namespace CRFTrainingAuto
             // compile polyrule.txt if update polyrule.txt file
             if (CompilerHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, LocalConfig.Instance.CharName))
             {
+                // TODO: this is not working now, use compile all current
+                Console.WriteLine("Compiling dat file now.");
+
+                if(!CompilerHelper.CompileAll("TODO: add the langdata compiler path", out message))
+                {
+                    throw new Exception("Compile dat file failed!");
+                }
+                
+                Helper.PrintColorMessageToOutput(ConsoleColor.Green, message);
+
+                /*
                 if (!CompilerHelper.CompileGeneralRule(LocalConfig.Instance.PolyRuleFilePath, out tempBinFile))
                 {
                     throw new Exception("Compile polyrule.txt file failed!");
@@ -972,6 +983,7 @@ namespace CRFTrainingAuto
 
                 // delete the temp file
                 File.Delete(tempBinFile);
+                */
             }
 
             // compile crf model
