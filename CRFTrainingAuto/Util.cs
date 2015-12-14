@@ -24,6 +24,16 @@ namespace CRFTrainingAuto
     {
         #region internal Fields
 
+        // crfmapping txt file
+        internal const string CRFMappingFileName = "CRFLocalizedMapping.txt";
+        internal const string CRFMappingFileFirstLineContent = "Map between polyphony model:";
+
+        // if being used, this value is "Being_used", if not used, the value is "Unused", currently we always use "Being_used", because we want to test the new crf model
+        internal const string CRFMappingFileBeingUsedValue = "Being_used";
+
+        // data file pattern, like MSTTSLocZhCn.dat, MSTTSLocEnUs.dat
+        internal const string DataFileNamePattern = "MSTTSLoc{0}.dat";
+
         // Excel first column for case, second column for corrct pron
         internal const int ExcelCaseColIndex = 1;
         internal const string ExcelCaseColTitle = "case";
@@ -37,7 +47,7 @@ namespace CRFTrainingAuto
         // Use 1000 for N cross folder test
         // Temp folder store filtered corpus data
         internal const string TempFolderName = "temp";
-        internal const string ExcelFileExtension = ".xls";
+        internal const string ExcelFileExtension = ".xlsx";
         internal const string TxtFileExtension = ".txt";
 
         internal const string CRFFileSearchExtension = "*.crf";
@@ -45,16 +55,16 @@ namespace CRFTrainingAuto
         internal const string XmlFileSearchExtension = "*.xml";
         internal const string CorpusTxtFileNamePattern = "corpus.{0}.txt";
         internal const string CorpusTxtAllFileName = "corpus.all.txt";
-        internal const string CorpusExcelFileNamePattern = "corpus.{0}.xls";
+        internal const string CorpusExcelFileNamePattern = "corpus.{0}.xlsx";
 
         internal const string TrainingFolderName = "trainingScript";
         internal const string NCrossFolderName = "NCross";
         internal const string VerifyResultFolderName = "VerifyResult";
         internal const string FinalResultFolderName = "FinalResult";
 
-        internal const string TrainingExcelFileName = "training.xls";
-        internal const string TestingExcelFileName = "testing.xls";
-        internal const string VerifyResultExcelFileName = "verifyResult.xls";
+        internal const string TrainingExcelFileName = "training.xlsx";
+        internal const string TestingExcelFileName = "testing.xlsx";
+        internal const string VerifyResultExcelFileName = "verifyResult.xlsx";
 
         internal const string TrainingConfigFileName = "training.config";
         internal const string TrainingConfigNamespace = "http://schemas.microsoft.com/tts/toolsuite";

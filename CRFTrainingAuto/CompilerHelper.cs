@@ -40,29 +40,34 @@ namespace CRFTrainingAuto
         /// Compile dat file.
         /// </summary>
         /// <param name="message">Compile result message.</param>
+        /// <param name="compiledDatFile">Compiled dat file path.</param>
         /// <returns>Success or not.</returns>
-        public static bool CompileAll(out string message)
+        public static bool CompileAll(out string message, out string compiledDatFile)
         {
-            string sdMsg = string.Empty;
-
+            compiledDatFile = null;
             try
             {
-                string lang = LocalConfig.Instance.Lang.ToString();
-                string configPath = Path.Combine(LocalConfig.Instance.BranchRootPath, Helper.NeutralFormat(@"private\dev\speech\tts\shenzhou\data\{0}\Release\platform\LangDataCompilerConfig.xml", lang));
-                string rawDataRootPath = Path.Combine(LocalConfig.Instance.BranchRootPath, Helper.NeutralFormat(@"private\dev\speech\tts\shenzhou\data\{0}", lang));
+                string sdMsg = string.Empty;
+
+                string configPath = LocalConfig.Instance.CompileConfigFilePath;
+                string rawDataRootPath = LocalConfig.Instance.CompileConfigRawDataRootPath;
                 string binRootPath = rawDataRootPath;
-                string outputDir = Path.Combine(LocalConfig.Instance.BranchRootPath, @"private\dev\speech\tts\shenzhou");
-                string reportPath = Path.Combine(LocalConfig.Instance.BranchRootPath, Helper.NeutralFormat(@"private\dev\speech\tts\shenzhou\data\{0}\binary\report.txt", lang));
+                string outputDir = LocalConfig.Instance.CompileConfigOutputDirPath;
+                string reportPath = LocalConfig.Instance.CompileConfigReportPath;
 
                 int sdExitCode = CommandLine.RunCommandWithOutputAndError(
                                                 Util.LangDataCompilerPath,
-                                                Helper.NeutralFormat(" - config {0} -rawdatarootpath {1} -binrootpath {2} -outputDir {3} -report {4}", configPath, rawDataRootPath, binRootPath, outputDir, reportPath),
+                                                Helper.NeutralFormat("- config {0} -rawdatarootpath {1} -binrootpath {2} -outputDir {3} -report {4}", configPath, rawDataRootPath, binRootPath, outputDir, reportPath),
                                                 Directory.GetCurrentDirectory(),
                                                 ref sdMsg);
 
                 if (sdExitCode == 0)
                 {
                     message = Helper.NeutralFormat("Compile succeed.");
+
+                    compiledDatFile = Path.Combine(outputDir, Helper.NeutralFormat(Util.DataFileNamePattern, LocalConfig.Instance.Lang);
+
+                    return File.Exists(compiledDatFile);
                 }
                 else
                 {
@@ -75,8 +80,6 @@ namespace CRFTrainingAuto
                 message = Helper.NeutralFormat("{0}. Failed to compile", e.Message);
                 return false;
             }
-
-            return true;
         }
 
         /// <summary>
@@ -257,6 +260,7 @@ namespace CRFTrainingAuto
 
         /// <summary>
         /// Load CRF model name mapping(model name and localized name).
+        /// We always use "Being_used" attribute for the new crf model for test it.
         /// </summary>
         /// <example>
         /// The mapping txt file is like below:
@@ -268,9 +272,8 @@ namespace CRFTrainingAuto
         /// </example>
         /// <param name="filePath">Crf mapping File Path.</param>
         /// <param name="crfFileName">Crf file name.</param>
-        /// <param name="usingInfo">Check the char whether to be used, in mapping file "Being_used" or "Unused".</param>
         /// <returns>Crf model files array, like bei.crf, wei.crf.</returns>
-        public static string[] UpdateCRFModelMappingFile(string filePath, string crfFileName, string usingInfo)
+        public static string[] UpdateCRFModelMappingFile(string filePath, string crfFileName)
         {
             Helper.ThrowIfFileNotExist(filePath);
 
@@ -278,15 +281,7 @@ namespace CRFTrainingAuto
             SdCommand.SdCheckoutFile(filePath, out message);
             Helper.PrintSuccessMessage(message);
 
-            if (!string.Equals(usingInfo, "Being_used") && !string.Equals(usingInfo, "Unused"))
-            {
-                throw new ArgumentException("usingInfo can only be \"Being_used\" or \"Unused\"!");
-            }
-
             List<string> crfFileNames = new List<string>();
-
-            // start flag of crf model mapping data
-            const string MappingFlag = "Map between polyphony model:";
 
             // line number start index is 1, next line will be read is 2
             int lineNumber = 1;
@@ -299,7 +294,7 @@ namespace CRFTrainingAuto
                 {
                     // if the first line matches, then continue to read
                     if (lineNumber == 1 &&
-                        !string.Equals(MappingFlag, line))
+                        !string.Equals(Util.CRFMappingFileFirstLineContent, line))
                     {
                         throw new FormatException(Helper.NeutralFormat("{0} mapping file has the wrong format!", filePath));
                     }
@@ -322,7 +317,7 @@ namespace CRFTrainingAuto
                             // if crf file name and using info are same, don't modify
                             // else edit thie line
                             if (string.Equals(currentCRFFile, crfFileName) &&
-                                string.Equals(currentUsingInfo, usingInfo))
+                                string.Equals(currentUsingInfo, Util.CRFMappingFileBeingUsedValue))
                             {
                                 needModify = false;
                             }
@@ -340,7 +335,7 @@ namespace CRFTrainingAuto
 
             if (needModify)
             {
-                string content = Helper.NeutralFormat("{0}\t->\t{1}\t{2}", LocalConfig.Instance.CharName, crfFileName, usingInfo);
+                string content = Helper.NeutralFormat("{0}\t->\t{1}\t{2}", LocalConfig.Instance.CharName, crfFileName, Util.CRFMappingFileBeingUsedValue);
                 Util.EditLineInFile(filePath, lineNumber, content, !charExist);
             }
 

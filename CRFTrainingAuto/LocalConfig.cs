@@ -40,13 +40,19 @@ namespace CRFTrainingAuto
         // private\dev\speech\tts\shenzhou\data\zh-CN\Language\Model.Rule\Polyphony\polyrule.txt
         private readonly string _polyRuleFilePathPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Language\Model.Rule\Polyphony\polyrule.txt";
 
+        // compile config path pattern
+        private readonly string _compileConfigFilePathPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Release\platform\LangDataCompilerConfig.xml";
+        private readonly string _compileConfigRawDataRootPathPattern = @"private\dev\speech\tts\shenzhou\data\{0}";
+        private readonly string _compileConfigOutputDirPathPattern = @"private\dev\speech\tts\shenzhou";
+        private readonly string _compileConfigReportFilePathPattern = @"private\dev\speech\tts\shenzhou\data\{0}\binary\report.txt";
+
+        // singleton pattern
         private static volatile LocalConfig _instance;
         private static object _locker = new object();
 
         private string _charName;
         private Language _lang;
         private string _outputCRFName;
-        private string _usingInfo;
         private string _crfModelDir;
         private string _defaultWordPron;
         private int _minCaseLength;
@@ -59,6 +65,10 @@ namespace CRFTrainingAuto
         private string _offlineToolPath;
         private string _langDataPath;
         private string _polyRuleFilePath;
+        private string _compileConfigFilePath;
+        private string _compileConfigRawDataRootPath;
+        private string _compileConfigOutputDirPath;
+        private string _compileConfigReportFilePath;
         private int _maxThreadCount;
         private string _trainingConfigTemplate;
         private string _featuresConfigTemplate;
@@ -124,17 +134,6 @@ namespace CRFTrainingAuto
             get
             {
                 return this._charName;
-            }
-        }
-
-        /// <summary>
-        /// Gets Using info in CRF mapping file, "Bing Used", or "Unused".
-        /// </summary>
-        public string UsingInfo
-        {
-            get
-            {
-                return this._usingInfo;
             }
         }
 
@@ -293,6 +292,50 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
+        /// Gets compile config file path.
+        /// </summary>
+        public string CompileConfigFilePath
+        {
+            get
+            {
+                return this._compileConfigFilePath;
+            }
+        }
+
+        /// <summary>
+        /// Gets compile raw data root path.
+        /// </summary>
+        public string CompileConfigRawDataRootPath
+        {
+            get
+            {
+                return this._compileConfigRawDataRootPath;
+            }
+        }
+
+        /// <summary>
+        /// Gets compile output folder.
+        /// </summary>
+        public string CompileConfigOutputDirPath
+        {
+            get
+            {
+                return this._compileConfigOutputDirPath;
+            }
+        }
+
+        /// <summary>
+        /// Gets compile report file path.
+        /// </summary>
+        public string CompileConfigReportPath
+        {
+            get
+            {
+                return this._compileConfigReportFilePath;
+            }
+        }
+
+        /// <summary>
         /// Gets max thread count when filtering char from corpus.
         /// </summary>
         public int MaxThreadCount
@@ -340,6 +383,7 @@ namespace CRFTrainingAuto
                 this._showTipCount = value;
             }
         }
+
         #endregion
 
         #region Methods
@@ -386,28 +430,35 @@ namespace CRFTrainingAuto
             if (node != null)
             {
                 this._lang = Localor.StringToLanguage(node.InnerText);
+
+                string langStringWithHyphen = Localor.LanguageToString(this._lang);
+
+                this._crfModelDir = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._crfModelDirPattern, langStringWithHyphen));
+                Helper.ThrowIfDirectoryNotExist(this._crfModelDir);
+
+                this._langDataPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._langDataPathPattern, this._lang));
+                Helper.ThrowIfFileNotExist(this._langDataPath);
+
+                this._polyRuleFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._polyRuleFilePathPattern, langStringWithHyphen));
+                Helper.ThrowIfFileNotExist(this._polyRuleFilePath);
+
+                this._compileConfigFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigFilePathPattern, langStringWithHyphen));
+                Helper.ThrowIfFileNotExist(this._compileConfigFilePath);
+
+                this._compileConfigRawDataRootPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigRawDataRootPathPattern, langStringWithHyphen));
+                Helper.ThrowIfDirectoryNotExist(this._compileConfigRawDataRootPath);
+
+                this._compileConfigOutputDirPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigOutputDirPathPattern, langStringWithHyphen));
+                Helper.ThrowIfDirectoryNotExist(this._compileConfigOutputDirPath);
+
+                this._compileConfigReportFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigReportFilePathPattern, langStringWithHyphen));
+                Helper.TestWritable(this._compileConfigReportFilePath);
             }
 
             node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:OutputCRFName", nsmgr);
             if (node != null)
             {
                 this._outputCRFName = node.InnerText;
-            }
-
-            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:Enabled", nsmgr);
-            if (node != null)
-            {
-                switch (node.InnerText)
-                {
-                    case "0":
-                        this._usingInfo = "Unused";
-                        break;
-                    case "1":
-                        this._usingInfo = "Being_used";
-                        break;
-                    default:
-                        throw new Exception("Enabled value can only be 1 or 0!");
-                }
             }
 
             node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:DefaultWordPron", nsmgr);
@@ -512,15 +563,6 @@ namespace CRFTrainingAuto
 
                 this._offlineToolPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._offlineToolPathPattern, this._arch));
                 Helper.ThrowIfDirectoryNotExist(this._offlineToolPath);
-
-                this._crfModelDir = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._crfModelDirPattern, Localor.LanguageToString(this._lang)));
-                Helper.ThrowIfDirectoryNotExist(this._crfModelDir);
-
-                this._langDataPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._langDataPathPattern, this._lang));
-                Helper.ThrowIfFileNotExist(this._langDataPath);
-
-                this._polyRuleFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._polyRuleFilePathPattern, Localor.LanguageToString(this._lang)));
-                Helper.ThrowIfFileNotExist(this._polyRuleFilePath);
             }
 
             node = xmlDoc.SelectSingleNode("//tts:MaxThreadCount", nsmgr);

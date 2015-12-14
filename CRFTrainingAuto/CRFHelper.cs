@@ -486,7 +486,7 @@ namespace CRFTrainingAuto
             // generate ing.config and feature.config for crf training
             GenCRFTrainingConfig(destDir);
 
-            // Check if the training file exist
+            // check if the training file exist
             string trainingFolder = Path.Combine(destDir, Util.TrainingFolderName);
             if (!Directory.Exists(trainingFolder)
                 || Directory.GetFiles(trainingFolder, Util.XmlFileSearchExtension).Count() <= 0)
@@ -511,10 +511,23 @@ namespace CRFTrainingAuto
 
             Helper.PrintSuccessMessage("Compiling language data " + destDir);
             string generatedCrf = Path.Combine(destDir, LocalConfig.Instance.OutputCRFName);
-            string generatedDataFile;
+            string srcDataFile, generatedDataFile;
 
-            // compile lang  data file
-            if (CompileLangData(generatedCrf, LocalConfig.Instance.CRFModelDir, destDir, out generatedDataFile))
+            ////#region Update CRFLocalizedMapping.txt file and check CRF model folder
+
+            UpdateCRFMapping(generatedCrf, LocalConfig.Instance.CRFModelDir);
+
+            ////#endregion
+
+            ////#region Update polyrule.txt and compile
+
+            UpdatePolyrule(out srcDataFile);
+            srcDataFile = srcDataFile ?? LocalConfig.Instance.LangDataPath;
+
+            ////#endregion
+
+            // compile language data file
+            if (BinReplaceCrfInData(generatedCrf, LocalConfig.Instance.CRFModelDir, srcDataFile, destDir, out generatedDataFile))
             {
                 Helper.PrintSuccessMessage("Successful compile " + generatedDataFile);
             }
@@ -558,6 +571,57 @@ namespace CRFTrainingAuto
                     Helper.PrintColorMessageToOutput(ConsoleColor.Red, message);
                     return;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Update crf mapping file and make sure crf ModelDir contains only necessary crf models.
+        /// </summary>
+        /// <param name="mappingFile">Crf mapping file path.</param>
+        /// <param name="crfModelDir">Crf model folder.</param>
+        public void UpdateCRFMapping(string mappingFile, string crfModelDir)
+        {
+            string message;
+            string crfMappingFilePath = Path.Combine(new DirectoryInfo(crfModelDir).Parent.FullName, Util.CRFMappingFileName);
+
+            // update the mapping file and return the crf model folder should contained crf iles
+            string[] crfFileNames = CompilerHelper.UpdateCRFModelMappingFile(crfMappingFilePath, Path.GetFileName(mappingFile));
+
+            SdCommand.SdRevertUnchangedFile(crfMappingFilePath, out message);
+
+            // make sure ModelUsed folder contains only crf files in CRFLocalizedMapping.txt file, if not, the compiled dat will wrong
+            foreach (string crfPath in Directory.GetFiles(crfModelDir, Util.CRFFileSearchExtension))
+            {
+                string fileName = Path.GetFileName(crfPath);
+
+                if (!crfFileNames.Contains(fileName, StringComparer.OrdinalIgnoreCase))
+                {
+                    // delete the crf file not declared in mapping file
+                    File.Delete(crfPath);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Update polyrule.txt file and compile.
+        /// </summary>
+        /// <param name="generatedDatFile">Generated data file path.</param>
+        public void UpdatePolyrule(out string generatedDatFile)
+        {
+            generatedDatFile = null;
+
+            // compile polyrule.txt if update polyrule.txt file
+            if (CompilerHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, LocalConfig.Instance.CharName))
+            {
+                string message;
+                Console.WriteLine("Compiling dat file now.");
+
+                if (!CompilerHelper.CompileAll(out message, out generatedDatFile))
+                {
+                    throw new Exception("Compile dat file failed!");
+                }
+
+                Helper.PrintColorMessageToOutput(ConsoleColor.Green, message);
             }
         }
 
@@ -868,22 +932,20 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Compile data file.
+        /// Binary replace crf model in original data file.
         /// </summary>
         /// <param name="crfFilePath">Trained crf file.</param>
         /// <param name="crfModelDir">Crf model folder.</param>
+        /// <param name="srcDataFile">original dat file path.</param>
         /// <param name="outputDir">Data file output folder.</param>
         /// <param name="generatedFilePath">Generated dat file path.</param>
         /// <returns>Compile success or not.</returns>
-        public bool CompileLangData(string crfFilePath, string crfModelDir, string outputDir, out string generatedFilePath)
+        public bool BinReplaceCrfInData(string crfFilePath, string crfModelDir, string srcDataFile, string outputDir, out string generatedFilePath)
         {
             string message;
 
-            // use the langDataPath
-            string srcDataFilePath = LocalConfig.Instance.LangDataPath;
-
             // copy the original dat file to outputDir
-            generatedFilePath = Path.Combine(outputDir, Path.GetFileName(srcDataFilePath));
+            generatedFilePath = Path.Combine(outputDir, Path.GetFileName(srcDataFile));
 
             // delete the existing data file
             FileInfo fi = new FileInfo(generatedFilePath);
@@ -903,7 +965,7 @@ namespace CRFTrainingAuto
             }
 
             // copy dat file to current output folder
-            File.Copy(srcDataFilePath, generatedFilePath, true);
+            File.Copy(srcDataFile, generatedFilePath, true);
 
             ////#region copy trained crf file to crfModel folder to compile temp bin file
 
@@ -930,61 +992,9 @@ namespace CRFTrainingAuto
 
             ////#endregion
 
-            ////#region Update CRFLocalizedMapping.txt file and check CRF model folder
-
-            string crfMappingFilePath = Path.Combine(new DirectoryInfo(crfModelDir).Parent.FullName, "CRFLocalizedMapping.txt");
-
-            // update the mapping file and return the crf model folder should contained crf iles
-            string[] crfFileNames = CompilerHelper.UpdateCRFModelMappingFile(crfMappingFilePath, Path.GetFileName(crfFilePath), LocalConfig.Instance.UsingInfo);
-
-            SdCommand.SdRevertUnchangedFile(crfMappingFilePath, out message);
-
-            // make sure ModelUsed contains only crf files in CRFLocalizedMapping.txt file, if not, the compiled dat will wrong
-            foreach (string crfPath in Directory.GetFiles(crfModelDir, Util.CRFFileSearchExtension))
-            {
-                string fileName = Path.GetFileName(crfPath);
-
-                if (!crfFileNames.Contains(fileName, StringComparer.OrdinalIgnoreCase))
-                {
-                    // delete the crf file not declared in mapping file
-                    File.Delete(crfPath);
-                }
-            }
-
-            ////#endregion
-
-            ////#region Compile
+            ////#region Compile crf model to data file
 
             string tempBinFile;
-
-            // compile polyrule.txt if update polyrule.txt file
-            if (CompilerHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, LocalConfig.Instance.CharName))
-            {
-                // TODO: this is not working now, use compile all current
-                Console.WriteLine("Compiling dat file now.");
-
-                if (!CompilerHelper.CompileAll(out message))
-                {
-                    throw new Exception("Compile dat file failed!");
-                }
-                
-                Helper.PrintColorMessageToOutput(ConsoleColor.Green, message);
-
-                /*
-                if (!CompilerHelper.CompileGeneralRule(LocalConfig.Instance.PolyRuleFilePath, out tempBinFile))
-                {
-                    throw new Exception("Compile polyrule.txt file failed!");
-                }
-
-                Microsoft.Tts.Offline.Compiler.LanguageData.LanguageDataHelper.ReplaceBinaryFile(
-                    generatedFilePath,
-                    tempBinFile,
-                    Microsoft.Tts.Offline.Compiler.LanguageData.ModuleDataName.PolyphoneRule);
-
-                // delete the temp file
-                File.Delete(tempBinFile);
-                */
-            }
 
             // compile crf model
             if (!CompilerHelper.CompileCRF(crfModelDir, LocalConfig.Instance.Lang, out tempBinFile))

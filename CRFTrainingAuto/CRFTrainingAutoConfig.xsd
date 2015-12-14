@@ -8,12 +8,11 @@
             <xs:sequence>
               <xs:element name="Language" type="xs:string" minOccurs="0" msdata:Ordinal="0" />
               <xs:element name="OutputCRFName" type="xs:string" minOccurs="0" msdata:Ordinal="1" />
-              <xs:element name="Enabled" type="xs:string" minOccurs="0" msdata:Ordinal="2" />
-              <xs:element name="DefaultWordPron" type="xs:string" minOccurs="0" msdata:Ordinal="3" />
-              <xs:element name="MinCaseLength" type="xs:string" minOccurs="0" msdata:Ordinal="4" />
-              <xs:element name="MaxCaseCount" type="xs:string" minOccurs="0" msdata:Ordinal="5" />
-              <xs:element name="NCrossCaseCount" type="xs:string" minOccurs="0" msdata:Ordinal="6" />
-              <xs:element name="NFolderCount" type="xs:string" minOccurs="0" msdata:Ordinal="7" />
+              <xs:element name="DefaultWordPron" type="xs:string" minOccurs="0" msdata:Ordinal="2" />
+              <xs:element name="MinCaseLength" type="xs:string" minOccurs="0" msdata:Ordinal="3" />
+              <xs:element name="MaxCaseCount" type="xs:string" minOccurs="0" msdata:Ordinal="4" />
+              <xs:element name="NCrossCaseCount" type="xs:string" minOccurs="0" msdata:Ordinal="5" />
+              <xs:element name="NFolderCount" type="xs:string" minOccurs="0" msdata:Ordinal="6" />
             </xs:sequence>
             <xs:attribute name="name" form="unqualified" type="xs:string" />
           </xs:complexType>
