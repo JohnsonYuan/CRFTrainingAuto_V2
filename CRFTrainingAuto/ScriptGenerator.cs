@@ -130,6 +130,7 @@ namespace CRFTrainingAuto
         /// Generate test case file.
         /// </summary>
         /// <example>
+        /// Test case example:
         /// <cases lang="zh-CN" component="Pronunciation" xmlns="http://schemas.microsoft.com/tts">
         ///   <case priority="P1" category="polyphone" pron_polyword="弹" index="1">
         ///      <input>”怎么变形都能弹回原状此外，此款眼镜还采用了柔性镜腿，精选高弹性塑胶钛制造，镜腿360度旋转不折断无变形。</input>
@@ -252,6 +253,7 @@ namespace CRFTrainingAuto
         /// Generate training script, if specify the existing script, output file's start index continue with existing script file.
         /// </summary>
         /// <example>
+        /// Training scirpt example:
         /// <script language="zh-CN" xmlns="http://schemas.microsoft.com/tts">
         ///   <si id="0000000861">
         ///     <text>莹莹水润的Q弹啫喱质地，脂玉一般清润透亮的色泽，极为清淡的植物清香，很”美味“的样子。</text>

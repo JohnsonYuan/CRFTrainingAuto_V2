@@ -26,13 +26,6 @@ namespace CRFTrainingAuto
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
     public class LocalConfig : XmlDataFile
     {
-        #region Static fields
-
-        private static volatile LocalConfig _instance;
-        private static object _locker = new object();
-
-        #endregion
-
         #region Fields
 
         // target\distrib\debug\{amd64/x86}\dev\TTS\Server\bin\Offline
@@ -46,6 +39,9 @@ namespace CRFTrainingAuto
         
         // private\dev\speech\tts\shenzhou\data\zh-CN\Language\Model.Rule\Polyphony\polyrule.txt
         private readonly string _polyRuleFilePathPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Language\Model.Rule\Polyphony\polyrule.txt";
+
+        private static volatile LocalConfig _instance;
+        private static object _locker = new object();
 
         private string _charName;
         private Language _lang;

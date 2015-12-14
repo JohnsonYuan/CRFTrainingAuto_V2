@@ -117,6 +117,19 @@ namespace CRFTrainingAuto
             }
         }
 
+        /// <summary>
+        /// Gets LangDataCompiler.exe path, used to compile dat files.
+        /// </summary>
+        public static string LangDataCompilerPath
+        {
+            get
+            {
+                string toolPath = Path.Combine(LocalConfig.Instance.OfflineToolPath, "LangDataCompiler.exe");
+
+                return toolPath;
+            }
+        }
+
         #endregion
 
         #region Public methods

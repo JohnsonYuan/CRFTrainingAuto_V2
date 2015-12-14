@@ -39,18 +39,24 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Compile dat file.
         /// </summary>
-        /// <param name="configFilePath">Compile config file path.</param>
         /// <param name="message">Compile result message.</param>
         /// <returns>Success or not.</returns>
-        public static bool CompileAll(string configFilePath, out string message)
+        public static bool CompileAll(out string message)
         {
             string sdMsg = string.Empty;
 
             try
             {
+                string lang = LocalConfig.Instance.Lang.ToString();
+                string configPath = Path.Combine(LocalConfig.Instance.BranchRootPath, Helper.NeutralFormat(@"private\dev\speech\tts\shenzhou\data\{0}\Release\platform\LangDataCompilerConfig.xml", lang));
+                string rawDataRootPath = Path.Combine(LocalConfig.Instance.BranchRootPath, Helper.NeutralFormat(@"private\dev\speech\tts\shenzhou\data\{0}", lang));
+                string binRootPath = rawDataRootPath;
+                string outputDir = Path.Combine(LocalConfig.Instance.BranchRootPath, @"private\dev\speech\tts\shenzhou");
+                string reportPath = Path.Combine(LocalConfig.Instance.BranchRootPath, Helper.NeutralFormat(@"private\dev\speech\tts\shenzhou\data\{0}\binary\report.txt", lang));
+
                 int sdExitCode = CommandLine.RunCommandWithOutputAndError(
-                                                "langdatacompiler.exe",
-                                                Helper.NeutralFormat("add {0}"),
+                                                Util.LangDataCompilerPath,
+                                                Helper.NeutralFormat(" - config {0} -rawdatarootpath {1} -binrootpath {2} -outputDir {3} -report {4}", configPath, rawDataRootPath, binRootPath, outputDir, reportPath),
                                                 Directory.GetCurrentDirectory(),
                                                 ref sdMsg);
 
@@ -139,7 +145,6 @@ namespace CRFTrainingAuto
         /// <returns>Success or not.</returns>
         public static bool CompileGeneralRule(string txtPath, out string tempBinFile)
         {
-            MemoryStream outputStream = new MemoryStream();
             try
             {
                 tempBinFile = Helper.GetTempFileName();
