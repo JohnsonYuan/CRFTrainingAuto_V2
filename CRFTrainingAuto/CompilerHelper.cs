@@ -13,6 +13,7 @@ namespace CRFTrainingAuto
     using System.Collections.Generic;
     using System.Collections.ObjectModel;
     using System.IO;
+    using System.Linq;
     using System.Text.RegularExpressions;
     using Microsoft.Tts.Offline;
     using Microsoft.Tts.Offline.Utility;
@@ -26,11 +27,14 @@ namespace CRFTrainingAuto
     {
         #region Fields
 
+        // polyrule.txt [domain=message]
+        private static readonly Regex DomainLineRegex = new Regex(@"^[ \t]*(\[domain=)([a-zA-Z]+)*(\])$", RegexOptions.Compiled);
+
         // polyrule.txt all >= 0 line
-        private const string PolyRuleDefaultRuleStartTag = "All >= 0 :";
+        private static readonly Regex PolyRuleDefaultRuleStartRegex = new Regex("^[ \t]*All[ \t]*>=[ \t]*0[ \t]*:(.+)$", RegexOptions.Compiled);
 
         // use this regex to find rule is used for which word
-        private static Regex _polyRuleKeyLineRegex = new Regex("CurW = \"(.+)\";", RegexOptions.Compiled);
+        private static readonly Regex PolyRuleKeyLineRegex = new Regex("^[ \t]*CurW[ \t]*=[ \t]*\"(.+)\"[ \t]*;[ \t]*$", RegexOptions.Compiled);
 
         #endregion
 
@@ -44,7 +48,7 @@ namespace CRFTrainingAuto
         /// <returns>Success or not.</returns>
         public static bool CompileAll(out string message, out string compiledDatFile)
         {
-            compiledDatFile = null;
+            compiledDatFile = LocalConfig.Instance.LangDataPath;
             try
             {
                 string sdMsg = string.Empty;
@@ -65,7 +69,7 @@ namespace CRFTrainingAuto
                 {
                     message = Helper.NeutralFormat("Compile succeed.");
 
-                    compiledDatFile = Path.Combine(outputDir, Helper.NeutralFormat(Util.DataFileNamePattern, LocalConfig.Instance.Lang);
+                    compiledDatFile = Path.Combine(outputDir, Helper.NeutralFormat(Util.DataFileNamePattern, LocalConfig.Instance.Lang));
 
                     return File.Exists(compiledDatFile);
                 }
@@ -83,7 +87,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// CRF compiler.
+        /// Compile CRF model.
         /// </summary>
         /// <param name="crfModelDir">Crf model folder.</param>
         /// <param name="lang">Language.</param>
@@ -141,26 +145,61 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// General Rule Compiler.
+        /// Compile general polurule and binary replace in data file.
         /// </summary>
-        /// <param name="txtPath">Path of txt formatted general rule.</param>
-        /// <param name="tempBinFile">Temp binary file path.</param>
+        /// <param name="polyrRuleFile">Polyrule.txt file path.</param>
+        /// <param name="compiledDatFile">New compiled dat file path.</param>
         /// <returns>Success or not.</returns>
-        public static bool CompileGeneralRule(string txtPath, out string tempBinFile)
+        public static bool CompileGeneralPolyRule(string polyrRuleFile, out string compiledDatFile)
         {
+            Helper.ThrowIfFileNotExist(polyrRuleFile);
+
+            string tempFolder = Helper.GetTempFolderName();
+            string tempGeneralRuleFile = Path.Combine(tempFolder, Util.TempGeneralPolyRuleFileName);
+            string tempBinFile = Path.Combine(tempFolder, Util.TempGeneralPolyRuleBinFileName);
+
+            compiledDatFile = Path.Combine(tempFolder, Path.GetFileName(LocalConfig.Instance.LangDataPath));
+
+            // delete the existing data file
+            Helper.ForcedDeleteFile(compiledDatFile);
+
+            // delete the backup data file, LanguageDataHelper.ReplaceBinaryFile will genereate again
+            string backFilePath = compiledDatFile + ".bak";
+            Helper.ForcedDeleteFile(backFilePath);
+
+            // copy the original data file to temp folder
+            File.Copy(LocalConfig.Instance.LangDataPath, compiledDatFile, true);
+
             try
             {
-                tempBinFile = Helper.GetTempFileName();
-                string compilingArguments = Helper.NeutralFormat("\"{0}\" \"{1}\"", txtPath, tempBinFile);
+                // split polyrule.txt
+                Microsoft.Tts.Offline.Frontend.RuleFile ruleFile = new Microsoft.Tts.Offline.Frontend.RuleFile();
+                ruleFile.Load(polyrRuleFile);
+
+                // select general rule file
+                var generalPolyRule = ruleFile.Split().FirstOrDefault(file => file.DomainTag == Microsoft.Tts.Offline.Core.DomainItem.GeneralDomain);
+
+                generalPolyRule.Save(tempGeneralRuleFile);
+                Helper.ThrowIfFileNotExist(tempGeneralRuleFile);
+
+                string compilingArguments = Helper.NeutralFormat("\"{0}\" \"{1}\"", tempGeneralRuleFile, tempBinFile);
 
                 string message = string.Empty;
 
+                // use polycomp.exe compile general polyrule.txt bin file
                 int exitCode = CommandLine.RunCommandWithOutputAndError(
                     Util.RuleCompilerPath, compilingArguments, null, ref message);
 
                 if (exitCode == 0)
                 {
-                    return File.Exists(tempBinFile);
+                    Helper.ThrowIfFileNotExist(tempBinFile);
+
+                    Microsoft.Tts.Offline.Compiler.LanguageData.LanguageDataHelper.ReplaceBinaryFile(
+                        compiledDatFile,
+                        tempBinFile,
+                        Microsoft.Tts.Offline.Compiler.LanguageData.ModuleDataName.PolyphoneRule);
+
+                    return File.Exists(compiledDatFile);
                 }
                 else
                 {
@@ -169,8 +208,20 @@ namespace CRFTrainingAuto
             }
             catch
             {
-                tempBinFile = null;
+                compiledDatFile = null;
                 return false;
+            }
+            finally
+            {
+                if (File.Exists(tempGeneralRuleFile))
+                {
+                    File.Delete(tempGeneralRuleFile);
+                }
+
+                if (File.Exists(tempBinFile))
+                {
+                    File.Delete(tempBinFile);
+                }
             }
         }
 
@@ -178,7 +229,6 @@ namespace CRFTrainingAuto
         /// Update polyrule.txt for specific char
         /// Delete "All >= 0" line if polyrule.txt file contains
         /// polyrule.txt is like below, we should remove All >= 0 : "b eh_h i_l"; to make CRF model working
-        /// [domain=address]
         /// CurW = "背";
         /// PrevW = "肩" : "b eh_h i_h";
         /// PrevW = "越" : "b eh_h i_h";
@@ -212,13 +262,20 @@ namespace CRFTrainingAuto
                         continue;
                     }
 
-                    if (lineContent.StartsWith("[domain", StringComparison.OrdinalIgnoreCase))
+                    if (DomainLineRegex.IsMatch(lineContent))
                     {
                         currentCharHasDomainAttr = true;
                     }
-                    else if (_polyRuleKeyLineRegex.IsMatch(lineContent))
+                    else if (PolyRuleKeyLineRegex.IsMatch(lineContent))
                     {
-                        currentChar = _polyRuleKeyLineRegex.Match(lineContent).Groups[1].Value;
+                        // if found next CurW="" line, don't need to modify the polyrule.txt
+                        if (foundTargetChar)
+                        {
+                            isNeedModify = false;
+                            break;
+                        }
+
+                        currentChar = PolyRuleKeyLineRegex.Match(lineContent).Groups[1].Value;
 
                         // if current rule is for training char and this is an general rule
                         if (string.Equals(currentChar, charName, StringComparison.Ordinal) &&
@@ -233,7 +290,7 @@ namespace CRFTrainingAuto
                     else if (foundTargetChar)
                     {
                         // update poly rule file the target char's general rule contains All >= 0
-                        if (lineContent.StartsWith(PolyRuleDefaultRuleStartTag, StringComparison.OrdinalIgnoreCase))
+                        if (PolyRuleDefaultRuleStartRegex.IsMatch(lineContent))
                         {
                             isNeedModify = true;
                             break;
@@ -273,6 +330,29 @@ namespace CRFTrainingAuto
         /// <param name="filePath">Crf mapping File Path.</param>
         /// <param name="crfFileName">Crf file name.</param>
         /// <returns>Crf model files array, like bei.crf, wei.crf.</returns>
+        // TODO:
+        /*
+        The implementation is too verbose, try this:
+struct CRFModelMapping
+{
+       string char;
+       string crfModelName;
+       string status;
+
+       CRFModelMapping(string line)
+       {
+                 line.split()
+                 char = [0];
+                 cfrModelName = [2];
+                 status = [3];
+       }
+
+       override ToString()
+       {
+                return string.Format("{0}->{1}{2}");
+       }
+}
+        */
         public static string[] UpdateCRFModelMappingFile(string filePath, string crfFileName)
         {
             Helper.ThrowIfFileNotExist(filePath);

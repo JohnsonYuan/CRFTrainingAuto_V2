@@ -24,7 +24,7 @@ namespace CRFTrainingAuto
     public static class ExcelHelper
     {
         /// <summary>
-        /// Each Dictionary item contains the case and the pron.
+        /// Each Dictionary item contains the case and the pron get from the execel file.
         /// </summary>
         /// <param name="usedRange">Excel used range.</param>
         /// <param name="useNavtivePhone">If true, the return value's pron is native pron, else use pinyin.</param>

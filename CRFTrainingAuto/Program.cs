@@ -49,9 +49,11 @@ namespace CRFTrainingAuto
                 return ExitCode.InvalidArgument;
             }
 
+            LocalConfig configInstance;
+
             if (!string.IsNullOrEmpty(arguments.ConfigPath))
             {
-                LocalConfig.Create(arguments.ConfigPath);
+                configInstance = new LocalConfig(arguments.ConfigPath);
             }
 
             CrfHelper crfHelper = new CrfHelper();

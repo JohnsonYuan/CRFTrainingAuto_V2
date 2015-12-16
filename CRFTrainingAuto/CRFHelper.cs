@@ -47,7 +47,7 @@ namespace CRFTrainingAuto
 
         /// <summary>
         /// Prepare train test set
-        /// Generate txt file contains single training char from inFolder
+        /// Generate txt file contains single training char from input folder
         /// First generate each file corresponding file to temp folder
         /// and then merge them, random select maxCount data.
         /// </summary>
@@ -345,6 +345,9 @@ namespace CRFTrainingAuto
             Helper.ThrowIfNull(trainingExcelFilePath);
             Helper.ThrowIfNull(testExcelFilePath);
 
+            string generatedDataFile = null;
+            bool isNeedCleanTempDir = UpdateMappingAndPolyruleFiles(LocalConfig.Instance.CRFModelDir, LocalConfig.Instance.PolyRuleFilePath, out generatedDataFile);
+
             ////#region put the 1000 training, and 500 test case to FinalResultFolder
 
             string finalFolder = Path.Combine(outputDir, Util.FinalResultFolderName);
@@ -372,11 +375,15 @@ namespace CRFTrainingAuto
             ScriptGenerator.GenScript(testExcelFilePath, GenerateAction.TestCase, finalFolder, Util.TestCaseFileName);
 
             // comple and run test
-            CompileAndTestInFolder(finalFolder);
+            CompileAndTestInFolder(finalFolder, generatedDataFile);
 
             ////#endregion
 
-            // save the n cross test data to NCrossFolder
+            //// #region save the n cross test data to NCrossFolder
+
+            // use features.config file from finalFolder, all ncross steps can use same features.config file
+            string featureConfigFile = Path.Combine(finalFolder, Util.FeatureConfigFileName);
+
             string nCrossFolder = Path.Combine(outputDir, Util.NCrossFolderName);
 
             // divide training excel file corpus to 10 separate testing and training part
@@ -394,7 +401,7 @@ namespace CRFTrainingAuto
                 // compile and run test in each folder
                 try
                 {
-                    CompileAndTestInFolder(destDir);
+                    CompileAndTestInFolder(destDir, generatedDataFile, featureConfigFile);
                 }
                 catch (Exception ex)
                 {
@@ -403,10 +410,18 @@ namespace CRFTrainingAuto
                 }
             }
 
+            ////#endregion
+
             // generate report based NCross test log
             string testReportPath = Path.Combine(outputDir, Util.TestReportFileName);
             GenNCrossTestReport(testlogPaths, testReportPath);
             Helper.PrintSuccessMessage("Generate test report " + testReportPath);
+
+            // clean the temp
+            if (isNeedCleanTempDir)
+            {
+                Helper.ForcedDeleteDir(Path.GetDirectoryName(generatedDataFile));
+            }
         }
 
         /// <summary>
@@ -437,7 +452,17 @@ namespace CRFTrainingAuto
 
             ScriptGenerator.GenScript(excelFile, GenerateAction.TrainingScript, trainingFolder, Util.TrainingFileName);
             ScriptGenerator.GenScript(excelFile, GenerateAction.TestCase, verifyResultFolder, Util.TestCaseFileName);
-            CompileAndTestInFolder(verifyResultFolder, true);
+
+            string generatedDataFile = null;
+            bool isNeedCleanTempDir = UpdateMappingAndPolyruleFiles(LocalConfig.Instance.CRFModelDir, LocalConfig.Instance.PolyRuleFilePath, out generatedDataFile);
+
+            CompileAndTestInFolder(verifyResultFolder, generatedDataFile, null, true);
+
+            // clean the temp
+            if (isNeedCleanTempDir)
+            {
+                Helper.ForcedDeleteDir(Path.GetDirectoryName(generatedDataFile));
+            }
         }
 
         /// <summary>
@@ -479,23 +504,25 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Compile and run test in folder.
         /// </summary>
-        /// <param name="destDir">Destination Folder.</param>
+        /// <param name="destDir">Destination folder.</param>
+        /// <param name="srcDataFile">If provided, the bin replace changes will based on this file, otherwise, based on LocalConfig.Instance.LangDataPath.</param>
+        /// <param name="featuresConfigPath">If not provide features.config file path, we generate a new features.config in current folder.</param>
         /// <param name="genExcelReport">If true, generate the excel report based on test result.</param>
-        public void CompileAndTestInFolder(string destDir, bool genExcelReport = false)
+        public void CompileAndTestInFolder(string destDir, string srcDataFile = null, string featuresConfigPath = null, bool genExcelReport = false)
         {
-            // generate ing.config and feature.config for crf training
-            GenCRFTrainingConfig(destDir);
+            // generate training.config and feature.config for crf training
+            GenCRFTrainingConfig(destDir, featuresConfigPath);
 
             // check if the training file exist
             string trainingFolder = Path.Combine(destDir, Util.TrainingFolderName);
             if (!Directory.Exists(trainingFolder)
                 || Directory.GetFiles(trainingFolder, Util.XmlFileSearchExtension).Count() <= 0)
             {
-                Helper.PrintColorMessageToOutput(ConsoleColor.Red, Helper.NeutralFormat("{0} doesn't exist or doesn't contains training scripts.", trainingFolder));
+                Helper.PrintColorMessageToOutput(ConsoleColor.Red, Helper.NeutralFormat("{0} doesn't exist or doesn't contain training scripts.", trainingFolder));
                 return;
             }
 
-            Helper.PrintSuccessMessage("Training crf model in " + destDir);
+            Helper.PrintSuccessMessage("Training crf model is in " + destDir);
             string message = string.Empty;
 
             if (TrainingCRFModel(Path.Combine(destDir, Util.TrainingConfigFileName),
@@ -511,23 +538,12 @@ namespace CRFTrainingAuto
 
             Helper.PrintSuccessMessage("Compiling language data " + destDir);
             string generatedCrf = Path.Combine(destDir, LocalConfig.Instance.OutputCRFName);
-            string srcDataFile, generatedDataFile;
+            string generatedDataFile;
 
-            ////#region Update CRFLocalizedMapping.txt file and check CRF model folder
-
-            UpdateCRFMapping(generatedCrf, LocalConfig.Instance.CRFModelDir);
-
-            ////#endregion
-
-            ////#region Update polyrule.txt and compile
-
-            UpdatePolyrule(out srcDataFile);
             srcDataFile = srcDataFile ?? LocalConfig.Instance.LangDataPath;
 
-            ////#endregion
-
             // compile language data file
-            if (BinReplaceCrfInData(generatedCrf, LocalConfig.Instance.CRFModelDir, srcDataFile, destDir, out generatedDataFile))
+            if (ReplaceBinCrfInDat(generatedCrf, LocalConfig.Instance.CRFModelDir, srcDataFile, destDir, out generatedDataFile))
             {
                 Helper.PrintSuccessMessage("Successful compile " + generatedDataFile);
             }
@@ -559,7 +575,7 @@ namespace CRFTrainingAuto
                         Helper.PrintSuccessMessage(message);
                     }
 
-                    // genereate excel report
+                    // generate excel report
                     if (genExcelReport)
                     {
                         Helper.PrintSuccessMessage("Genereating excel test result");
@@ -575,17 +591,37 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
+        /// Update CRFMapping file and polyrule.txt file, and return true compiled dat file if polyrule.txt exist.
+        /// </summary>
+        /// <param name="crfModelDir">Crf model used folder.</param>
+        /// <param name="polyRuleFile">Polyrule.txt file path.</param>
+        /// <param name="generatedDatFile">Generated new dat file with polyrule.txt file change.</param>
+        /// <returns>True if polyrule.txt file changed and new data file generated.</returns>
+        public bool UpdateMappingAndPolyruleFiles(string crfModelDir, string polyRuleFile, out string generatedDatFile)
+        {
+            // Update CRFLocalizedMapping.txt file and check CRF model folder
+            UpdateCRFMappingFile(LocalConfig.Instance.CRFModelDir);
+
+            // Update polyrule.txt and compile
+            if (UpdatePolyruleFileAndCompile(polyRuleFile, out generatedDatFile))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Update crf mapping file and make sure crf ModelDir contains only necessary crf models.
         /// </summary>
-        /// <param name="mappingFile">Crf mapping file path.</param>
-        /// <param name="crfModelDir">Crf model folder.</param>
-        public void UpdateCRFMapping(string mappingFile, string crfModelDir)
+        /// <param name="crfModelDir">Crf model used folder.</param>
+        public void UpdateCRFMappingFile(string crfModelDir)
         {
             string message;
             string crfMappingFilePath = Path.Combine(new DirectoryInfo(crfModelDir).Parent.FullName, Util.CRFMappingFileName);
 
             // update the mapping file and return the crf model folder should contained crf iles
-            string[] crfFileNames = CompilerHelper.UpdateCRFModelMappingFile(crfMappingFilePath, Path.GetFileName(mappingFile));
+            string[] crfFileNames = CompilerHelper.UpdateCRFModelMappingFile(crfMappingFilePath, Path.GetFileName(crfMappingFilePath));
 
             SdCommand.SdRevertUnchangedFile(crfMappingFilePath, out message);
 
@@ -596,6 +632,7 @@ namespace CRFTrainingAuto
 
                 if (!crfFileNames.Contains(fileName, StringComparer.OrdinalIgnoreCase))
                 {
+                    // TODO: if this really happens, all files in ModelUsed folder were checked in. Should use SdCommand.Delete()...
                     // delete the crf file not declared in mapping file
                     File.Delete(crfPath);
                 }
@@ -605,24 +642,27 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Update polyrule.txt file and compile.
         /// </summary>
+        /// <param name="polyRuleFile">Polyrule.txt file path.</param>
         /// <param name="generatedDatFile">Generated data file path.</param>
-        public void UpdatePolyrule(out string generatedDatFile)
+        /// <returns>True if polyrule.txt file changes and compile new data file success.</returns>
+        public bool UpdatePolyruleFileAndCompile(string polyRuleFile, out string generatedDatFile)
         {
-            generatedDatFile = null;
-
             // compile polyrule.txt if update polyrule.txt file
-            if (CompilerHelper.UpdatePolyRuleFile(LocalConfig.Instance.PolyRuleFilePath, LocalConfig.Instance.CharName))
+            if (CompilerHelper.UpdatePolyRuleFile(polyRuleFile, LocalConfig.Instance.CharName))
             {
-                string message;
                 Console.WriteLine("Compiling dat file now.");
 
-                if (!CompilerHelper.CompileAll(out message, out generatedDatFile))
+                if (!CompilerHelper.CompileGeneralPolyRule(polyRuleFile, out generatedDatFile))
                 {
                     throw new Exception("Compile dat file failed!");
                 }
 
-                Helper.PrintColorMessageToOutput(ConsoleColor.Green, message);
+                Helper.PrintColorMessageToOutput(ConsoleColor.Green, "Compiled dat file " + generatedDatFile + ".");
+                return File.Exists(generatedDatFile);
             }
+
+            generatedDatFile = null;
+            return false;
         }
 
         /// <summary>
@@ -720,7 +760,10 @@ namespace CRFTrainingAuto
             Console.WriteLine("Generate bug fixing file " + saveFilePath);
 
             // recompile and run test
-            CompileAndTestInFolder(outputDir);
+            string generatedDataFile = null;
+            bool isNeedCleanTempDir = UpdateMappingAndPolyruleFiles(LocalConfig.Instance.CRFModelDir, LocalConfig.Instance.PolyRuleFilePath, out generatedDataFile);
+
+            CompileAndTestInFolder(outputDir, generatedDataFile);
 
             // test the bugfixing item using the newly compiled dat file
             string bugFixingTestFile = Path.Combine(outputDir, Util.BugFixingTestFileName);
@@ -742,13 +785,19 @@ namespace CRFTrainingAuto
                     Helper.PrintSuccessMessage(message);
                 }
             }
+
+            // clean the temp
+            if (isNeedCleanTempDir)
+            {
+                Helper.ForcedDeleteDir(Path.GetDirectoryName(generatedDataFile));
+            }
         }
 
         /// <summary>
-        /// Generate report from all testResults.
+        /// Generate report from NCross testResults.
         /// </summary>
         /// <example>
-        /// Frontmeasure test report is like below, Match Ratio          = 92.00 it the redio result line
+        /// Frontmeasure test report is like below
         /// POLYPHONE: 弹
         /// INPUT: (P1)
         /// 我曾经三次上战场，我上去是要带着光荣弹，最后一颗子弹留给自己的，这绝对的牺牲，这点是西方军队比不了的。
@@ -890,9 +939,29 @@ namespace CRFTrainingAuto
         /// Generate corresponding training.config and feature.config outputDir.
         /// </summary>
         /// <param name="outputDir">Output folder.</param>
-        public void GenCRFTrainingConfig(string outputDir)
+        /// <param name="featuresConfigPath">If not provide features.cofnig file path, we generate a new features.config in current folder.</param>
+        public void GenCRFTrainingConfig(string outputDir, string featuresConfigPath)
         {
             XmlDocument doc = new XmlDocument();
+
+            string linguisticFeatureListFile;
+
+            // if features.config file exist, we just use it
+            if (!string.IsNullOrEmpty(featuresConfigPath) &&
+                File.Exists(featuresConfigPath))
+            {
+                linguisticFeatureListFile = featuresConfigPath;
+            }
+            else
+            {
+                linguisticFeatureListFile = Path.Combine(outputDir, Util.FeatureConfigFileName);
+
+                // create a new features.config file
+                doc.LoadXml(LocalConfig.Instance.FeaturesConfigTemplate);
+                doc.Save(linguisticFeatureListFile);
+            }
+
+            // generate training.config
             doc.LoadXml(LocalConfig.Instance.TrainingConfigTemplate);
 
             foreach (XmlNode node in doc.DocumentElement.GetElementsByTagName("include").Item(0))
@@ -911,7 +980,7 @@ namespace CRFTrainingAuto
                         node.InnerXml = node.InnerXml.Replace("#branch_root#", LocalConfig.Instance.BranchRootPath).Replace("#lang#", Localor.LanguageToString(LocalConfig.Instance.Lang));
                         break;
                     case "$env.LinguisticFeatureListFile":
-                        node.InnerXml = Path.Combine(outputDir, Util.FeatureConfigFileName);
+                        node.InnerXml = linguisticFeatureListFile;
                         break;
                     case "$env.OutputDir":
                         node.InnerXml = outputDir;
@@ -925,22 +994,18 @@ namespace CRFTrainingAuto
             }
 
             doc.Save(Path.Combine(outputDir, Util.TrainingConfigFileName));
-
-            // copy the feature.config
-            doc.LoadXml(LocalConfig.Instance.FeaturesConfigTemplate);
-            doc.Save(Path.Combine(outputDir, Util.FeatureConfigFileName));
         }
 
         /// <summary>
-        /// Binary replace crf model in original data file.
+        /// Replace binary crf model in general domain dat.
         /// </summary>
         /// <param name="crfFilePath">Trained crf file.</param>
         /// <param name="crfModelDir">Crf model folder.</param>
-        /// <param name="srcDataFile">original dat file path.</param>
+        /// <param name="srcDataFile">Original dat file path.</param>
         /// <param name="outputDir">Data file output folder.</param>
         /// <param name="generatedFilePath">Generated dat file path.</param>
         /// <returns>Compile success or not.</returns>
-        public bool BinReplaceCrfInData(string crfFilePath, string crfModelDir, string srcDataFile, string outputDir, out string generatedFilePath)
+        public bool ReplaceBinCrfInDat(string crfFilePath, string crfModelDir, string srcDataFile, string outputDir, out string generatedFilePath)
         {
             string message;
 
@@ -948,21 +1013,11 @@ namespace CRFTrainingAuto
             generatedFilePath = Path.Combine(outputDir, Path.GetFileName(srcDataFile));
 
             // delete the existing data file
-            FileInfo fi = new FileInfo(generatedFilePath);
-            if (fi.Exists && fi.IsReadOnly)
-            {
-                fi.IsReadOnly = false;
-                fi.Delete();
-            }
+            Helper.ForcedDeleteFile(generatedFilePath);
 
             // delete the backup data file, LanguageDataHelper.ReplaceBinaryFile will genereate again
             string backFilePath = generatedFilePath + ".bak";
-            fi = new FileInfo(backFilePath);
-            if (fi.Exists && fi.IsReadOnly)
-            {
-                fi.IsReadOnly = false;
-                fi.Delete();
-            }
+            Helper.ForcedDeleteFile(backFilePath);
 
             // copy dat file to current output folder
             File.Copy(srcDataFile, generatedFilePath, true);
@@ -970,7 +1025,7 @@ namespace CRFTrainingAuto
             ////#region copy trained crf file to crfModel folder to compile temp bin file
 
             string destCrfFilePath = Path.Combine(crfModelDir, Path.GetFileName(crfFilePath));
-            fi = new FileInfo(destCrfFilePath);
+            FileInfo fi = new FileInfo(destCrfFilePath);
 
             bool isDestCrfExist = fi.Exists;
 
@@ -1018,6 +1073,8 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Use FrontendMeasure to test testcaseFile and results saved to outputPath
         /// FrontendMeasure.exe -mode runtest -log "[path]\log.txt" -x "[path]\test.xml".
+        /// // TODO: Do we need to do this every time?  You can have an Environment Prepare step.
+        /// // TODO: Could you please try to unify print screen call? I saw console.writeline, Helper.PrintColorMessageToOutput ...
         /// </summary>
         /// <param name="srcDatFile">Source dat flie path.</param>
         /// <param name="testcaseFile">Test case file path.</param>

@@ -48,7 +48,6 @@ namespace CRFTrainingAuto
 
         // singleton pattern
         private static volatile LocalConfig _instance;
-        private static object _locker = new object();
 
         private string _charName;
         private Language _lang;
@@ -83,14 +82,16 @@ namespace CRFTrainingAuto
         /// Initializes a new instance of the LocalConfig class.
         /// </summary>
         /// <param name="configPath">Xml config file path.</param>
-        private LocalConfig(string configPath)
+        public LocalConfig(string configPath)
         {
             base.Load(configPath);
+            _instance = this;
         }
 
         #endregion
 
         #region Properties
+
         /// <summary>
         /// Gets LocalConfig instance.
         /// </summary>
@@ -389,28 +390,6 @@ namespace CRFTrainingAuto
         #region Methods
 
         /// <summary>
-        /// Init _instance when _instance is null, support multithread Singleton.
-        /// </summary>
-        /// <param name="configFilePath">Xml config file path.</param>
-        public static void Create(string configFilePath)
-        {
-            if (_instance == null)
-            {
-                lock (_locker)
-                {
-                    if (_instance == null)
-                    {
-                        _instance = new LocalConfig(configFilePath);
-                    }
-                }
-            }
-            else
-            {
-                throw new Exception("Object already created");
-            }
-        }
-
-        /// <summary>
         /// Load XML file.
         /// </summary>
         /// <param name="xmlDoc">XmlDocument.</param>
@@ -430,29 +409,6 @@ namespace CRFTrainingAuto
             if (node != null)
             {
                 this._lang = Localor.StringToLanguage(node.InnerText);
-
-                string langStringWithHyphen = Localor.LanguageToString(this._lang);
-
-                this._crfModelDir = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._crfModelDirPattern, langStringWithHyphen));
-                Helper.ThrowIfDirectoryNotExist(this._crfModelDir);
-
-                this._langDataPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._langDataPathPattern, this._lang));
-                Helper.ThrowIfFileNotExist(this._langDataPath);
-
-                this._polyRuleFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._polyRuleFilePathPattern, langStringWithHyphen));
-                Helper.ThrowIfFileNotExist(this._polyRuleFilePath);
-
-                this._compileConfigFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigFilePathPattern, langStringWithHyphen));
-                Helper.ThrowIfFileNotExist(this._compileConfigFilePath);
-
-                this._compileConfigRawDataRootPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigRawDataRootPathPattern, langStringWithHyphen));
-                Helper.ThrowIfDirectoryNotExist(this._compileConfigRawDataRootPath);
-
-                this._compileConfigOutputDirPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigOutputDirPathPattern, langStringWithHyphen));
-                Helper.ThrowIfDirectoryNotExist(this._compileConfigOutputDirPath);
-
-                this._compileConfigReportFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigReportFilePathPattern, langStringWithHyphen));
-                Helper.TestWritable(this._compileConfigReportFilePath);
             }
 
             node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:OutputCRFName", nsmgr);
@@ -554,6 +510,29 @@ namespace CRFTrainingAuto
                 {
                     throw Helper.CreateException(typeof(DirectoryNotFoundException), this._branchRootPath);
                 }
+
+                string langStringWithHyphen = Localor.LanguageToString(this._lang);
+
+                this._crfModelDir = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._crfModelDirPattern, langStringWithHyphen));
+                Helper.ThrowIfDirectoryNotExist(this._crfModelDir);
+
+                this._langDataPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._langDataPathPattern, this._lang));
+                Helper.ThrowIfFileNotExist(this._langDataPath);
+
+                this._polyRuleFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._polyRuleFilePathPattern, langStringWithHyphen));
+                Helper.ThrowIfFileNotExist(this._polyRuleFilePath);
+
+                this._compileConfigFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigFilePathPattern, langStringWithHyphen));
+                Helper.ThrowIfFileNotExist(this._compileConfigFilePath);
+
+                this._compileConfigRawDataRootPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigRawDataRootPathPattern, langStringWithHyphen));
+                Helper.ThrowIfDirectoryNotExist(this._compileConfigRawDataRootPath);
+
+                this._compileConfigOutputDirPath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigOutputDirPathPattern, langStringWithHyphen));
+                Helper.ThrowIfDirectoryNotExist(this._compileConfigOutputDirPath);
+
+                this._compileConfigReportFilePath = Path.Combine(this._branchRootPath, Helper.NeutralFormat(this._compileConfigReportFilePathPattern, langStringWithHyphen));
+                Helper.TestWritable(this._compileConfigReportFilePath);
             }
 
             node = xmlDoc.SelectSingleNode("//tts:Paths/tts:Arch", nsmgr);
