@@ -56,6 +56,10 @@ namespace CRFTrainingAuto
         #endregion
 
         #region Properties
+
+        /// <summary>
+        /// Gets the TTS engine.
+        /// </summary>
         public SP.TtsEngine TtsEngine
         {
             get

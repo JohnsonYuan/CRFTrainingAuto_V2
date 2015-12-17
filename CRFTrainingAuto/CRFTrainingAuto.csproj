@@ -96,11 +96,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Arguments.cs" />
-    <Compile Include="Breaker.cs" />
-    <Compile Include="CompilerHelper.cs" />
-    <Compile Include="CRFHelper.cs" />
-    <Compile Include="ExcelHelper.cs" />
+    <Compile Include="Helper\Breaker.cs" />
+    <Compile Include="Helper\CompilerHelper.cs" />
+    <Compile Include="Helper\CRFHelper.cs" />
+    <Compile Include="Helper\ExcelHelper.cs" />
     <Compile Include="Extensions.cs" />
+    <Compile Include="Helper\PolyRuleFileHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScriptGenerator.cs" />

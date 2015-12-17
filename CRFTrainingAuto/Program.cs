@@ -15,6 +15,9 @@ namespace CRFTrainingAuto
     using System.Linq;
     using Microsoft.Tts.Offline.Utility;
 
+    /// <summary>
+    /// Program.
+    /// </summary>
     public class Program
     {
         /// <summary>
