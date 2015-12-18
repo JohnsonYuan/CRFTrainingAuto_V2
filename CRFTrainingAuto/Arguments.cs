@@ -422,6 +422,7 @@ namespace CRFTrainingAuto
         /// <param name="msg">Error message.</param>
         /// <param name="checkExist">Whether need to check file exist.</param>
         /// <returns>True or false.</returns>
+        //TODO: IsMatchFileExtension
         private bool IsMatchFileExtension(string filePath, string extension, ref string msg, bool checkExist = true)
         {
             if (string.IsNullOrEmpty(filePath))

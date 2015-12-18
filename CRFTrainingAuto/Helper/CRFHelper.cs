@@ -1162,6 +1162,15 @@ namespace CRFTrainingAuto
             return File.Exists(generatedFilePath);
         }
 
+        // TODO: You still run it 11 times in line 488
+        /*
+        try
+                {
+                    CompileAndTestInFolder(destDir);
+                    CompileAndTestInFolder(destDir, generatedDataFile, featureConfigFile);
+                }
+
+        */
         /// <summary>
         /// Use FrontendMeasure to test testcaseFile and results saved to outputPath
         /// FrontendMeasure.exe -mode runtest -log "[path]\log.txt" -x "[path]\test.xml".

@@ -18,13 +18,14 @@ namespace CRFTrainingAuto
     using Microsoft.Tts.Offline.Frontend;
     using Microsoft.Tts.Offline.Utility;
 
+    // TODO: All your calsses are named as helper. Needn't put it in a new folder. Just give it a easy understand name
     /// <summary>
     /// PolyRuleFileHelper
     /// Since Microsoft.Tts.Offline.Frontend doesn't expose _ruleItems, so create a new class, then we can edit the polyrule item and save.
     /// </summary>
     /// <seealso cref="Microsoft.Tts.Offline.Frontend.RuleFile" />
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
-    public class PolyRuleFileHelper : RuleFile
+    public class PolyRuleFileHelper
     {
         private const string DeclearKeyRegex = @"^([a-zA-Z]+)[ \t]*#[ \t]*(string|int|(enum.*))[ \t]*;[ \t]*(//.*)?$";
 

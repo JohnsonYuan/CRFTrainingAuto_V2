@@ -242,6 +242,47 @@ namespace CRFTrainingAuto
         /// <param name="filePath">Crf mapping file path.</param>
         /// <param name="crfFileName">Crf file name.</param>
         /// <returns>Crf model files array, like bei.crf, wei.crf.</returns>
+        /* TODO
+
+        You still don't get the soul. 
+option1: There's already a load method, can also have a save method, save maps after edit.
+
+option2: if you don't want to have another method, just use a streamwriter, write every edit/add map item into file. 
+
+        The implementation is too verbose, try this:
+struct CRFModelMapping
+{
+       string char;
+       string crfModelName;
+       string status;
+
+       CRFModelMapping(string line)
+       {
+                 line.split()
+                 char = [0];
+                 cfrModelName = [2];
+                 status = [3];
+       }
+
+       override ToString()
+       {
+                return string.Format("{0}->{1}{2}");
+       }
+}
+
+string[] UpdateCRFModelMappingFile(string filePath, string crfFileName)
+{
+        List<CRFModelMapping> maps = Load(filePath);
+        foreach(var map in maps )
+        {
+                  // update or not
+                  // save to streamwriter or something else
+                  map.ToString();
+        }
+}
+
+        
+        */
         public static string[] UpdateCRFModelMappingFile(string filePath, string crfFileName)
         {
             Helper.ThrowIfFileNotExist(filePath);
@@ -297,6 +338,7 @@ namespace CRFTrainingAuto
             return crfMappings.Select(m => m.CrfModelName).ToArray();
         }
 
+        // TODO: You use it just for skipping the header? Do you really don't have other concise method?
         /// <summary>
         /// Loads the CRF model mapping.
         /// </summary>
