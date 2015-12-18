@@ -372,20 +372,26 @@ namespace CRFTrainingAuto
                 return null;
             }
 
-            HashSet<string> results = new HashSet<string>();
+            // use the hashset to fast iteration and save the case and word break result to List results
+            HashSet<string> tempResults = new HashSet<string>();
+            List<string> results = new List<string>();
+
             Random rand = new Random();
 
-            // results should contains LocalConfig.Instance.MaxCaseCount * 2 lines
-            while (results.Count < LocalConfig.Instance.MaxCaseCount * 2)
+            // results should contains LocalConfig.Instance.MaxCaseCount lines
+            while (tempResults.Count < LocalConfig.Instance.MaxCaseCount)
             {
                 int index = rand.Next(0, inputs.Count);
 
                 var selectTarget = inputs[index];
                 string curSentence = selectTarget.Content;
 
-                if (!results.Contains(curSentence))
+                if (!tempResults.Contains(curSentence))
                 {
+                    tempResults.Add(curSentence);
+
                     results.Add(curSentence);
+                    results.Add(selectTarget.WBResult.SpaceSeparate());
 
                     // remove this item from input also
                     inputs.Remove(selectTarget);
@@ -1159,8 +1165,6 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Use FrontendMeasure to test testcaseFile and results saved to outputPath
         /// FrontendMeasure.exe -mode runtest -log "[path]\log.txt" -x "[path]\test.xml".
-        /// // TODO: Do we need to do this every time?  You can have an Environment Prepare step.
-        /// // TODO: Could you please try to unify print screen call? I saw console.writeline, Helper.PrintColorMessageToOutput ...
         /// </summary>
         /// <param name="srcDatFile">Source dat flie path.</param>
         /// <param name="testcaseFile">Test case file path.</param>

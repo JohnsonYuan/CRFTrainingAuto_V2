@@ -96,7 +96,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Arguments.cs" />
-    <Compile Include="Helper\Breaker.cs" />
+    <Compile Include="Breaker.cs" />
     <Compile Include="Helper\CompilerHelper.cs" />
     <Compile Include="Helper\CRFHelper.cs" />
     <Compile Include="Helper\ExcelHelper.cs" />
