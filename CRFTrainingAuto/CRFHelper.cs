@@ -24,9 +24,93 @@ namespace CRFTrainingAuto
     /// </summary>
     public struct SentenceAndWBResult
     {
+        /// <summary>
+        /// Gets or sets the content.
+        /// </summary>
         public string Content { get; set; }
 
+        /// <summary>
+        /// Gets or sets the word break result.
+        /// </summary>
         public string[] WBResult { get; set; }
+    }
+
+    /// <summary>
+    /// CRFModelMapping, used to represent CRFLocalizedMapping.txt line content.
+    /// </summary>
+    public struct CRFModelMapping
+    {
+        /// <summary>
+        /// The character name.
+        /// </summary>
+        public string CharName;
+
+        /// <summary>
+        /// The CRF model file name.
+        /// </summary>
+        public string CrfModelName;
+
+        /// <summary>
+        /// The status, "Being_used" or "Unused".
+        /// </summary>
+        public string Status;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CRFModelMapping"/> struct.
+        /// </summary>
+        /// <param name="line">The line content.</param>
+        public CRFModelMapping(string line)
+        {
+            Helper.ThrowIfNull(line);
+
+            string[] splitResult = line.Trim().Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (splitResult.Length != 4)
+            {
+                throw new FormatException(Helper.NeutralFormat("Mapping line content \"{0}\" has the wrong format!", line));
+            }
+
+            CharName = splitResult[0];
+            CrfModelName = splitResult[2];
+            Status = splitResult[3];
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CRFModelMapping"/> struct.
+        /// </summary>
+        /// <param name="charName">Name of the character.</param>
+        /// <param name="crfModelName">Name of the CRF model.</param>
+        /// <param name="status">The status.</param>
+        public CRFModelMapping(string charName, string crfModelName, string status)
+        {
+            CharName = charName;
+            CrfModelName = crfModelName;
+            Status = status;
+        }
+
+        /// <summary>
+        /// Performs an explicit conversion from string to <see cref="CRFModelMapping"/>.
+        /// </summary>
+        /// <param name="line">The input line.</param>
+        /// <returns>
+        /// CRFModelMapping struct.
+        /// </returns>
+        public static explicit operator CRFModelMapping(string line)
+        {
+            return new CRFModelMapping(line);
+        }
+
+        /// <summary>
+        /// CRFLocalizedMapping.txt line content.
+        /// </summary>
+        /// <returns>
+        /// CRFLocalizedMapping.txt line content, like 系 -> xi.crf Unused.
+        /// </returns>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
+        public override string ToString()
+        {
+            return Helper.NeutralFormat("{0}\t->\t{1}\t{2}", CharName, CrfModelName, Status);
+        }
     }
 
     /// <summary>
@@ -288,20 +372,26 @@ namespace CRFTrainingAuto
                 return null;
             }
 
-            HashSet<string> results = new HashSet<string>();
+            // use the hashset to fast iteration and save the case and word break result to List results
+            HashSet<string> tempResults = new HashSet<string>();
+            List<string> results = new List<string>();
+
             Random rand = new Random();
 
-            // results should contains LocalConfig.Instance.MaxCaseCount * 2 lines
-            while (results.Count < LocalConfig.Instance.MaxCaseCount * 2)
+            // results should contains LocalConfig.Instance.MaxCaseCount lines
+            while (tempResults.Count < LocalConfig.Instance.MaxCaseCount)
             {
                 int index = rand.Next(0, inputs.Count);
 
                 var selectTarget = inputs[index];
                 string curSentence = selectTarget.Content;
 
-                if (!results.Contains(curSentence))
+                if (!tempResults.Contains(curSentence))
                 {
+                    tempResults.Add(curSentence);
+
                     results.Add(curSentence);
+                    results.Add(selectTarget.WBResult.SpaceSeparate());
 
                     // remove this item from input also
                     inputs.Remove(selectTarget);
@@ -316,7 +406,7 @@ namespace CRFTrainingAuto
             string outputExcelFilePath = Path.Combine(outputDir, Helper.NeutralFormat(Util.CorpusExcelFileNamePattern, LocalConfig.Instance.MaxCaseCount));
             try
             {
-                ExcelHelper.GenExcelFromTxtFile(randomTxtFilePath, outputExcelFilePath);
+                ExcelGenerator.GenExcelFromTxtFile(randomTxtFilePath, outputExcelFilePath);
             }
             catch (Exception)
             {
@@ -340,7 +430,7 @@ namespace CRFTrainingAuto
             string trainingExcelFilePath;
             string testExcelFilePath;
 
-            ExcelHelper.DivideExcelCorpus(excelFile, outputDir, out trainingExcelFilePath, out testExcelFilePath);
+            ExcelGenerator.DivideExcelCorpus(excelFile, outputDir, out trainingExcelFilePath, out testExcelFilePath);
 
             Helper.ThrowIfNull(trainingExcelFilePath);
             Helper.ThrowIfNull(testExcelFilePath);
@@ -388,7 +478,7 @@ namespace CRFTrainingAuto
 
             // divide training excel file corpus to 10 separate testing and training part
             Helper.PrintSuccessMessage("Start N Cross excel " + trainingExcelFilePath);
-            ExcelHelper.GenNCrossExcel(trainingExcelFilePath, nCrossFolder);
+            ExcelGenerator.GenNCrossExcel(trainingExcelFilePath, nCrossFolder);
             Helper.PrintSuccessMessage("End N Cross excel " + trainingExcelFilePath);
 
             string[] testlogPaths = new string[LocalConfig.Instance.NFolderCount];
@@ -513,6 +603,8 @@ namespace CRFTrainingAuto
             // generate training.config and feature.config for crf training
             GenCRFTrainingConfig(destDir, featuresConfigPath);
 
+            PrepareTestEnvironment();
+
             // check if the training file exist
             string trainingFolder = Path.Combine(destDir, Util.TrainingFolderName);
             if (!Directory.Exists(trainingFolder)
@@ -579,7 +671,7 @@ namespace CRFTrainingAuto
                     if (genExcelReport)
                     {
                         Helper.PrintSuccessMessage("Genereating excel test result");
-                        ExcelHelper.GenExcelTestReport(testLogFile);
+                        ExcelGenerator.GenExcelTestReport(testLogFile);
                     }
                 }
                 else
@@ -632,9 +724,7 @@ namespace CRFTrainingAuto
 
                 if (!crfFileNames.Contains(fileName, StringComparer.OrdinalIgnoreCase))
                 {
-                    // TODO: if this really happens, all files in ModelUsed folder were checked in. Should use SdCommand.Delete()...
-                    // delete the crf file not declared in mapping file
-                    File.Delete(crfPath);
+                    Helper.ForcedDeleteFile(crfPath);
                 }
             }
         }
@@ -675,6 +765,8 @@ namespace CRFTrainingAuto
         /// <param name="outputDir">Parent folder that contains TrainingScript folder.</param>
         public void AppendTrainingScriptAndReRunTest(string bugFixingFilePath, string outputDir)
         {
+            PrepareTestEnvironment();
+
             string trainingFolder = Path.Combine(outputDir, Util.TrainingFolderName);
 
             Helper.ThrowIfDirectoryNotExist(trainingFolder);
@@ -1073,8 +1165,6 @@ namespace CRFTrainingAuto
         /// <summary>
         /// Use FrontendMeasure to test testcaseFile and results saved to outputPath
         /// FrontendMeasure.exe -mode runtest -log "[path]\log.txt" -x "[path]\test.xml".
-        /// // TODO: Do we need to do this every time?  You can have an Environment Prepare step.
-        /// // TODO: Could you please try to unify print screen call? I saw console.writeline, Helper.PrintColorMessageToOutput ...
         /// </summary>
         /// <param name="srcDatFile">Source dat flie path.</param>
         /// <param name="testcaseFile">Test case file path.</param>
@@ -1087,27 +1177,6 @@ namespace CRFTrainingAuto
 
             try
             {
-                // copy the required 4 dlls to FrontendMeasure.exe folder
-                // Microsoft.Tts.Offline.dll, System.Speech.dll from Offline
-                // HostCommon.dll, TestEngine_UTest.dll test\TTS\bin\Avatar
-                string frontendMeasureDir = Path.GetDirectoryName(Util.FrontendMeasurePath);
-                string[] requiredDllPaths =
-                {
-                    Path.Combine(LocalConfig.Instance.OfflineToolPath, "Microsoft.Tts.Offline.dll"),
-                    Path.Combine(LocalConfig.Instance.OfflineToolPath, "System.Speech.dll"),
-                    Path.Combine(frontendMeasureDir, "Avatar", "HostCommon.dll"),
-                    Path.Combine(frontendMeasureDir, "Avatar", "TestEngine_UTest.dll")
-                };
-
-                foreach (string dllPath in requiredDllPaths)
-                {
-                    string dllName = Path.GetFileName(dllPath);
-                    if (!File.Exists(Path.Combine(frontendMeasureDir, dllName)))
-                    {
-                        File.Copy(dllPath, Path.Combine(frontendMeasureDir, dllName));
-                    }
-                }
-
                 // copy generaetd data file to offline\LocaleHandler folder
                 string datDestPath = Path.Combine(LocalConfig.Instance.OfflineToolPath, "LocaleHandler", Path.GetFileName(srcDatFile));
 
@@ -1194,6 +1263,34 @@ namespace CRFTrainingAuto
             }
 
             Task.WaitAll(tasks);
+        }
+
+        /// <summary>
+        /// Prepares the required dlls for FrontendMeasure.exe.
+        /// </summary>
+        public void PrepareTestEnvironment()
+        {
+            // copy the required 4 dlls to FrontendMeasure.exe folder
+            // Microsoft.Tts.Offline.dll, System.Speech.dll from Offline
+            // HostCommon.dll, TestEngine_UTest.dll test\TTS\bin\Avatar
+            string frontendMeasureDir = Path.GetDirectoryName(Util.FrontendMeasurePath);
+
+            string[] requiredDllPaths =
+            {
+                    Path.Combine(LocalConfig.Instance.OfflineToolPath, "Microsoft.Tts.Offline.dll"),
+                    Path.Combine(LocalConfig.Instance.OfflineToolPath, "System.Speech.dll"),
+                    Path.Combine(frontendMeasureDir, "Avatar", "HostCommon.dll"),
+                    Path.Combine(frontendMeasureDir, "Avatar", "TestEngine_UTest.dll")
+                };
+
+            foreach (string dllPath in requiredDllPaths)
+            {
+                string dllName = Path.GetFileName(dllPath);
+                if (!File.Exists(Path.Combine(frontendMeasureDir, dllName)))
+                {
+                    File.Copy(dllPath, Path.Combine(frontendMeasureDir, dllName));
+                }
+            }
         }
 
         /// <summary>

@@ -71,10 +71,10 @@ namespace CRFTrainingAuto
 
             try
             {
-                if (ExcelHelper.VerifyExcelSheet(xlWorkSheet))
+                if (ExcelGenerator.VerifyExcelSheet(xlWorkSheet))
                 {
                     // load cases and prons
-                    Dictionary<SentenceAndWBResult, string> caseAndProns = ExcelHelper.GetCaseAndPronsFromExcel(range);
+                    Dictionary<SentenceAndWBResult, string> caseAndProns = ExcelGenerator.GetCaseAndPronsFromExcel(range);
                     string outputFilePath;
                     switch (action)
                     {
@@ -120,9 +120,9 @@ namespace CRFTrainingAuto
                     xlApp.Quit();
                 }
 
-                ExcelHelper.ReleaseExcelObject(xlWorkSheet);
-                ExcelHelper.ReleaseExcelObject(xlWorkBook);
-                ExcelHelper.ReleaseExcelObject(xlApp);
+                ExcelGenerator.ReleaseExcelObject(xlWorkSheet);
+                ExcelGenerator.ReleaseExcelObject(xlWorkBook);
+                ExcelGenerator.ReleaseExcelObject(xlApp);
             }
         }
 

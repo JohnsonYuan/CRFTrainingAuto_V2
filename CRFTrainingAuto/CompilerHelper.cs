@@ -14,77 +14,18 @@ namespace CRFTrainingAuto
     using System.Collections.ObjectModel;
     using System.IO;
     using System.Linq;
-    using System.Text.RegularExpressions;
     using Microsoft.Tts.Offline;
+    using Microsoft.Tts.Offline.Frontend;
     using Microsoft.Tts.Offline.Utility;
 
     /// <summary>
-    /// Compiler helper, compile crf model and general rule.
+    /// Compiler helper, compile crf model and generate rule.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
     public static class CompilerHelper
     {
-        #region Fields
-
-        // polyrule.txt [domain=message]
-        private static readonly Regex DomainLineRegex = new Regex(@"^[ \t]*(\[domain=)([a-zA-Z]+)*(\])$", RegexOptions.Compiled);
-
-        // polyrule.txt all >= 0 line
-        private static readonly Regex PolyRuleDefaultRuleStartRegex = new Regex("^[ \t]*All[ \t]*>=[ \t]*0[ \t]*:(.+)$", RegexOptions.Compiled);
-
-        // use this regex to find rule is used for which word
-        private static readonly Regex PolyRuleKeyLineRegex = new Regex("^[ \t]*CurW[ \t]*=[ \t]*\"(.+)\"[ \t]*;[ \t]*$", RegexOptions.Compiled);
-
-        #endregion
-
         #region Methods
-
-        /// <summary>
-        /// Compile dat file.
-        /// </summary>
-        /// <param name="message">Compile result message.</param>
-        /// <param name="compiledDatFile">Compiled dat file path.</param>
-        /// <returns>Success or not.</returns>
-        public static bool CompileAll(out string message, out string compiledDatFile)
-        {
-            compiledDatFile = LocalConfig.Instance.LangDataPath;
-            try
-            {
-                string sdMsg = string.Empty;
-
-                string configPath = LocalConfig.Instance.CompileConfigFilePath;
-                string rawDataRootPath = LocalConfig.Instance.CompileConfigRawDataRootPath;
-                string binRootPath = rawDataRootPath;
-                string outputDir = LocalConfig.Instance.CompileConfigOutputDirPath;
-                string reportPath = LocalConfig.Instance.CompileConfigReportPath;
-
-                int sdExitCode = CommandLine.RunCommandWithOutputAndError(
-                                                Util.LangDataCompilerPath,
-                                                Helper.NeutralFormat("- config {0} -rawdatarootpath {1} -binrootpath {2} -outputDir {3} -report {4}", configPath, rawDataRootPath, binRootPath, outputDir, reportPath),
-                                                Directory.GetCurrentDirectory(),
-                                                ref sdMsg);
-
-                if (sdExitCode == 0)
-                {
-                    message = Helper.NeutralFormat("Compile succeed.");
-
-                    compiledDatFile = Path.Combine(outputDir, Helper.NeutralFormat(Util.DataFileNamePattern, LocalConfig.Instance.Lang));
-
-                    return File.Exists(compiledDatFile);
-                }
-                else
-                {
-                    message = Helper.NeutralFormat("Failed to compile! {0}", sdMsg);
-                    return false;
-                }
-            }
-            catch (Exception e)
-            {
-                message = Helper.NeutralFormat("{0}. Failed to compile", e.Message);
-                return false;
-            }
-        }
 
         /// <summary>
         /// Compile CRF model.
@@ -173,7 +114,7 @@ namespace CRFTrainingAuto
             try
             {
                 // split polyrule.txt
-                Microsoft.Tts.Offline.Frontend.RuleFile ruleFile = new Microsoft.Tts.Offline.Frontend.RuleFile();
+                RuleFile ruleFile = new RuleFile();
                 ruleFile.Load(polyrRuleFile);
 
                 // select general rule file
@@ -242,74 +183,45 @@ namespace CRFTrainingAuto
             Helper.ThrowIfFileNotExist(filePath);
             Helper.ThrowIfNull(charName);
 
-            int lineNumber = 0;
+            PolyRuleFileHelper polyRuleFile = new PolyRuleFileHelper();
 
-            bool foundTargetChar = false;
-            bool isNeedModify = false;
-            bool currentCharHasDomainAttr = false;
-            string currentChar;
-
-            using (StreamReader reader = new StreamReader(filePath))
+            try
             {
-                while (reader.Peek() > -1)
+                polyRuleFile.Load(filePath);
+
+                List<RuleItem> ruleItems = polyRuleFile.RuleItems;
+
+                RuleItem charItem = ruleItems.FirstOrDefault(r => r.DomainTag == Microsoft.Tts.Offline.Core.DomainItem.GeneralDomain);
+
+                if (charItem != null)
                 {
-                    ++lineNumber;
+                    string lastRuleContent = charItem.RuleContent.LastOrDefault();
+                    Helper.ThrowIfNull(lastRuleContent);
 
-                    string lineContent = reader.ReadLine();
-
-                    if (string.IsNullOrEmpty(lineContent))
+                    if (polyRuleFile.IsPolyRuleDefaultRule(lastRuleContent))
                     {
-                        continue;
-                    }
-
-                    if (DomainLineRegex.IsMatch(lineContent))
-                    {
-                        currentCharHasDomainAttr = true;
-                    }
-                    else if (PolyRuleKeyLineRegex.IsMatch(lineContent))
-                    {
-                        // if found next CurW="" line, don't need to modify the polyrule.txt
-                        if (foundTargetChar)
+                        // if current item only contains All >= rule , then remove this item
+                        if (charItem.RuleContent.Count == 1)
                         {
-                            isNeedModify = false;
-                            break;
+                            ruleItems.Remove(charItem);
+                        }
+                        else
+                        {
+                            charItem.RuleContent.Remove(lastRuleContent);
                         }
 
-                        currentChar = PolyRuleKeyLineRegex.Match(lineContent).Groups[1].Value;
+                        string message;
+                        SdCommand.SdCheckoutFile(filePath, out message);
 
-                        // if current rule is for training char and this is an general rule
-                        if (string.Equals(currentChar, charName, StringComparison.Ordinal) &&
-                            !currentCharHasDomainAttr)
-                        {
-                            foundTargetChar = true;
-                        }
+                        polyRuleFile.Save(filePath);
 
-                        // assign to false, iterate next char
-                        currentCharHasDomainAttr = false;
-                    }
-                    else if (foundTargetChar)
-                    {
-                        // update poly rule file the target char's general rule contains All >= 0
-                        if (PolyRuleDefaultRuleStartRegex.IsMatch(lineContent))
-                        {
-                            isNeedModify = true;
-                            break;
-                        }
+                        Helper.PrintSuccessMessage(message);
                     }
                 }
             }
-
-            if (isNeedModify)
+            catch
             {
-                string message;
-
-                SdCommand.SdCheckoutFile(filePath, out message);
-                Helper.PrintSuccessMessage(message);
-
-                // remove All >= 0 line in poly rule file
-                Util.EditLineInFile(filePath, lineNumber, null);
-
-                return true;
+                throw;
             }
 
             return false;
@@ -327,11 +239,16 @@ namespace CRFTrainingAuto
         /// 行 -> hang.crf Being_used
         /// 系 -> xi.crf Unused.
         /// </example>
-        /// <param name="filePath">Crf mapping File Path.</param>
+        /// <param name="filePath">Crf mapping file path.</param>
         /// <param name="crfFileName">Crf file name.</param>
         /// <returns>Crf model files array, like bei.crf, wei.crf.</returns>
-        // TODO:
-        /*
+        /* TODO
+
+        You still don't get the soul. 
+option1: There's already a load method, can also have a save method, save maps after edit.
+
+option2: if you don't want to have another method, just use a streamwriter, write every edit/add map item into file. 
+
         The implementation is too verbose, try this:
 struct CRFModelMapping
 {
@@ -352,6 +269,19 @@ struct CRFModelMapping
                 return string.Format("{0}->{1}{2}");
        }
 }
+
+string[] UpdateCRFModelMappingFile(string filePath, string crfFileName)
+{
+        List<CRFModelMapping> maps = Load(filePath);
+        foreach(var map in maps )
+        {
+                  // update or not
+                  // save to streamwriter or something else
+                  map.ToString();
+        }
+}
+
+        
         */
         public static string[] UpdateCRFModelMappingFile(string filePath, string crfFileName)
         {
@@ -361,12 +291,62 @@ struct CRFModelMapping
             SdCommand.SdCheckoutFile(filePath, out message);
             Helper.PrintSuccessMessage(message);
 
-            List<string> crfFileNames = new List<string>();
+            var crfMappings = LoadCRFModelMapping(filePath);
 
-            // line number start index is 1, next line will be read is 2
-            int lineNumber = 1;
+            // line number start index is 2, the mapping file first line won't change
+            int lineNumber = 2;
             bool needModify = true;
             bool charExist = false;
+
+            foreach (CRFModelMapping mapping in crfMappings)
+            {
+                string currentChar = mapping.CharName;
+                string currentCrfFile = mapping.CrfModelName;
+                string currentStatus = mapping.Status;
+
+                // if current line's char is same with charName para, check whether need to modify this line
+                if (string.Equals(currentChar, LocalConfig.Instance.CharName))
+                {
+                    // if crf file name and using info are same, don't modify
+                    // else edit thie line
+                    if (string.Equals(currentCrfFile, crfFileName) &&
+                        string.Equals(currentStatus, Util.CRFMappingFileBeingUsedValue))
+                    {
+                        needModify = false;
+                    }
+                    else
+                    {
+                        charExist = true;
+                    }
+                }
+
+                ++lineNumber;
+            }
+
+            if (needModify)
+            {
+                string content = Helper.NeutralFormat("{0}\t->\t{1}\t{2}", LocalConfig.Instance.CharName, crfFileName, Util.CRFMappingFileBeingUsedValue);
+                Util.EditLineInFile(filePath, lineNumber, content, !charExist);
+            }
+
+            // if the newly char not exist, update the crfMappings variable
+            if (!charExist)
+            {
+                crfMappings = LoadCRFModelMapping(filePath);
+            }
+
+            return crfMappings.Select(m => m.CrfModelName).ToArray();
+        }
+
+        // TODO: You use it just for skipping the header? Do you really don't have other concise method?
+        /// <summary>
+        /// Loads the CRF model mapping.
+        /// </summary>
+        /// <param name="filePath">The file path.</param>
+        /// <returns>List collection of CRFModelMapping in this file.</returns>
+        public static IEnumerable<CRFModelMapping> LoadCRFModelMapping(string filePath)
+        {
+            int lineNumber = 1;
 
             using (StreamReader reader = new StreamReader(filePath))
             {
@@ -380,46 +360,12 @@ struct CRFModelMapping
                     }
                     else if (lineNumber > 1)
                     {
-                        string[] mapping = line.Trim().Split('\t');
-
-                        if (mapping.Length != 4)
-                        {
-                            throw new FormatException(Helper.NeutralFormat("{0} mapping file has the wrong format!", filePath));
-                        }
-
-                        string currentChar = mapping[0];
-                        string currentCRFFile = mapping[2];
-                        string currentUsingInfo = mapping[3];
-
-                        // if current line's char is same with charName para, check whether need to modify this line
-                        if (string.Equals(currentChar, LocalConfig.Instance.CharName))
-                        {
-                            // if crf file name and using info are same, don't modify
-                            // else edit thie line
-                            if (string.Equals(currentCRFFile, crfFileName) &&
-                                string.Equals(currentUsingInfo, Util.CRFMappingFileBeingUsedValue))
-                            {
-                                needModify = false;
-                            }
-                            else
-                            {
-                                charExist = true;
-                            }
-                        }
-
-                        crfFileNames.Add(currentCRFFile);
+                        yield return (CRFModelMapping)line;
                     }
+
                     ++lineNumber;
                 }
             }
-
-            if (needModify)
-            {
-                string content = Helper.NeutralFormat("{0}\t->\t{1}\t{2}", LocalConfig.Instance.CharName, crfFileName, Util.CRFMappingFileBeingUsedValue);
-                Util.EditLineInFile(filePath, lineNumber, content, !charExist);
-            }
-
-            return crfFileNames.ToArray();
         }
 
         #endregion
