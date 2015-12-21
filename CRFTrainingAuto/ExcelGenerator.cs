@@ -17,11 +17,11 @@ namespace CRFTrainingAuto
     using Excel = Microsoft.Office.Interop.Excel;
 
     /// <summary>
-    /// Excel helper class.
+    /// Excel generator.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
-    public static class ExcelHelper
+    public static class ExcelGenerator
     {
         /// <summary>
         /// Each Dictionary item contains the case and the pron get from the execel file.

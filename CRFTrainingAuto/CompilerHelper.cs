@@ -19,7 +19,7 @@ namespace CRFTrainingAuto
     using Microsoft.Tts.Offline.Utility;
 
     /// <summary>
-    /// Compiler helper, compile crf model and general rule.
+    /// Compiler helper, compile crf model and generate rule.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.DocumentationRules", "SA1650:ElementDocumentationMustBeSpelledCorrectly", Justification = "Reviewed.")]
@@ -183,13 +183,21 @@ namespace CRFTrainingAuto
             Helper.ThrowIfFileNotExist(filePath);
             Helper.ThrowIfNull(charName);
 
+<<<<<<< HEAD
             FullRuleFile polyRuleFile = new FullRuleFile();
+=======
+            PolyRuleFileHelper polyRuleFile = new PolyRuleFileHelper();
+>>>>>>> ece98cee2355d1d684eaa3037e5397be7eeb124b
 
             try
             {
                 polyRuleFile.Load(filePath);
 
+<<<<<<< HEAD
                 Collection<RuleItem> ruleItems = polyRuleFile.RuleItems;
+=======
+                List<RuleItem> ruleItems = polyRuleFile.RuleItems;
+>>>>>>> ece98cee2355d1d684eaa3037e5397be7eeb124b
 
                 RuleItem charItem = ruleItems.FirstOrDefault(r => r.DomainTag == Microsoft.Tts.Offline.Core.DomainItem.GeneralDomain);
 
@@ -198,7 +206,11 @@ namespace CRFTrainingAuto
                     string lastRuleContent = charItem.RuleContent.LastOrDefault();
                     Helper.ThrowIfNull(lastRuleContent);
 
+<<<<<<< HEAD
                     if (RuleFile.IsPolyRuleDefaultRule(lastRuleContent))
+=======
+                    if (polyRuleFile.IsPolyRuleDefaultRule(lastRuleContent))
+>>>>>>> ece98cee2355d1d684eaa3037e5397be7eeb124b
                     {
                         // if current item only contains All >= rule , then remove this item
                         if (charItem.RuleContent.Count == 1)

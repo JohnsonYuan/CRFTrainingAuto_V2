@@ -406,7 +406,7 @@ namespace CRFTrainingAuto
             string outputExcelFilePath = Path.Combine(outputDir, Helper.NeutralFormat(Util.CorpusExcelFileNamePattern, LocalConfig.Instance.MaxCaseCount));
             try
             {
-                ExcelHelper.GenExcelFromTxtFile(randomTxtFilePath, outputExcelFilePath);
+                ExcelGenerator.GenExcelFromTxtFile(randomTxtFilePath, outputExcelFilePath);
             }
             catch (Exception)
             {
@@ -430,7 +430,7 @@ namespace CRFTrainingAuto
             string trainingExcelFilePath;
             string testExcelFilePath;
 
-            ExcelHelper.DivideExcelCorpus(excelFile, outputDir, out trainingExcelFilePath, out testExcelFilePath);
+            ExcelGenerator.DivideExcelCorpus(excelFile, outputDir, out trainingExcelFilePath, out testExcelFilePath);
 
             Helper.ThrowIfNull(trainingExcelFilePath);
             Helper.ThrowIfNull(testExcelFilePath);
@@ -478,7 +478,7 @@ namespace CRFTrainingAuto
 
             // divide training excel file corpus to 10 separate testing and training part
             Helper.PrintSuccessMessage("Start N Cross excel " + trainingExcelFilePath);
-            ExcelHelper.GenNCrossExcel(trainingExcelFilePath, nCrossFolder);
+            ExcelGenerator.GenNCrossExcel(trainingExcelFilePath, nCrossFolder);
             Helper.PrintSuccessMessage("End N Cross excel " + trainingExcelFilePath);
 
             string[] testlogPaths = new string[LocalConfig.Instance.NFolderCount];
@@ -671,7 +671,7 @@ namespace CRFTrainingAuto
                     if (genExcelReport)
                     {
                         Helper.PrintSuccessMessage("Genereating excel test result");
-                        ExcelHelper.GenExcelTestReport(testLogFile);
+                        ExcelGenerator.GenExcelTestReport(testLogFile);
                     }
                 }
                 else
