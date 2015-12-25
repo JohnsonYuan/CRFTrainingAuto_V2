@@ -34,7 +34,7 @@ namespace CRFTrainingAuto
         // data file pattern, like MSTTSLocZhCn.dat, MSTTSLocEnUs.dat
         internal const string DataFileNamePattern = "MSTTSLoc{0}.dat";
 
-        // temp poly rule file
+        // temp polyrule file
         internal const string TempGeneralPolyRuleFileName = "polyrule.general.txt";
         internal const string TempGeneralPolyRuleBinFileName = "polyphony.bin";
 
@@ -206,7 +206,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Splict large files and save to.
+        /// Split large files and save to.
         /// </summary>
         /// <param name="splitUnit">Split unit, GB, MB, KB, Byte.</param>
         /// <param name="intFlag">Split size.</param>
@@ -378,7 +378,7 @@ namespace CRFTrainingAuto
                 }
             }
 
-            // current line shoud - 1
+            // current line should - 1
             --curLine;
 
             // if lineNumber large than current file's line, append blank line, and the new line
@@ -419,7 +419,7 @@ namespace CRFTrainingAuto
         /// </summary>
         /// <param name="inputFilePath">Txt corpus file path.</param>
         /// <param name="hasWbResult">Whether the file has word break.</param>
-        /// <returns>Sntence and word break result.</returns>
+        /// <returns>Sentence and word break result.</returns>
         public static IList<SentenceAndWBResult> GetSenAndWbFromCorpus(string inputFilePath, bool hasWbResult = true)
         {
             Helper.ThrowIfFileNotExist(inputFilePath);

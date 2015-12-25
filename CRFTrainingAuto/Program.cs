@@ -77,7 +77,7 @@ namespace CRFTrainingAuto
                     break;
                 case ExecuteMode.GenXlsTestReport:
                     // InputPath is txt file path
-                    ExcelHelper.GenExcelTestReport(arguments.InputPath);
+                    ExcelGenerator.GenExcelTestReport(arguments.InputPath);
                     break;
                 case ExecuteMode.Compile:
                     // InputPath is folder
@@ -85,8 +85,8 @@ namespace CRFTrainingAuto
                     break;
                 case ExecuteMode.GenXls:
                     // InputPath is txt file path, OutputPath is excel file path
-                    // if IsNeedWb == 0, the word break result is in input file, otherwise, use word break genereate word break result
-                    ExcelHelper.GenExcelFromTxtFile(arguments.InputPath, arguments.OutputPath, arguments.IsNeedWb == 0);
+                    // if IsNeedWb == 0, the word break result is in input file, otherwise, use word break generate word break result
+                    ExcelGenerator.GenExcelFromTxtFile(arguments.InputPath, arguments.OutputPath, arguments.IsNeedWb == 0);
                     break;
                 case ExecuteMode.GenTrain:
                 case ExecuteMode.GenTest:

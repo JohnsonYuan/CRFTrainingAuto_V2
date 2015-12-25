@@ -35,7 +35,7 @@ namespace CRFTrainingAuto
         GenVerify,
 
         /// <summary>
-        ///  Generate excel report from front measure.exe test result.
+        ///  Generate excel report from front measure test result.
         /// </summary>
         GenXlsTestReport,
 
@@ -183,7 +183,7 @@ namespace CRFTrainingAuto
         {
             get { return _configPath; }
         }
-        
+
         /// <summary>
         /// Gets split unit, GB, MB, KB or Byte.
         /// </summary>
@@ -191,7 +191,7 @@ namespace CRFTrainingAuto
         {
             get { return _splitUnit; }
         }
-        
+
         /// <summary>
         /// Gets split file size.
         /// </summary>
@@ -231,33 +231,33 @@ namespace CRFTrainingAuto
                 // make sure input and out folder all exist
                 case ExecuteMode.FilterChar:
                 case ExecuteMode.SS:
-                    if (!IsDirectoryExist(_inputPath, ref msg))
+                    if (!IsDirectoryOrFileExist(_inputPath, ref msg))
                     {
                         yield return msg;
                     }
 
-                    if (!IsDirectoryExist(_outputPath, ref msg))
+                    if (!IsDirectoryOrFileExist(_outputPath, ref msg))
                     {
                         yield return msg;
                     }
 
                     // check word break result folder if provided
                     if (!string.IsNullOrEmpty(_wordBreakPath) &&
-                        !IsDirectoryExist(_wordBreakPath, ref msg))
+                        !IsDirectoryOrFileExist(_wordBreakPath, ref msg))
                     {
                         yield return msg;
                     }
 
                     break;
                 case ExecuteMode.Compile:
-                    if (!IsDirectoryExist(_inputPath, ref msg))
+                    if (!IsDirectoryOrFileExist(_inputPath, ref msg))
                     {
                         yield return msg;
                     }
 
                     break;
                 case ExecuteMode.WB:
-                    if (!IsDirectoryExist(_outputPath, ref msg))
+                    if (!IsDirectoryOrFileExist(_outputPath, ref msg))
                     {
                         yield return msg;
                     }
@@ -265,13 +265,18 @@ namespace CRFTrainingAuto
                     break;
                 case ExecuteMode.GenXls:
 
-                    // the input should be txt file, output is excel file
-                    if (!IsMatchFileExtension(_inputPath, TxtFileExtension, ref msg))
+                    if (!IsDirectoryOrFileExist(_inputPath, ref msg))
                     {
                         yield return msg;
                     }
 
-                    if (!IsMatchFileExtension(_outputPath, ExcelFileExtension, ref msg, false))
+                    // the input should be txt file, output is excel file
+                    if (!IsFileExtensionValid(_inputPath, TxtFileExtension, ref msg))
+                    {
+                        yield return msg;
+                    }
+
+                    if (!IsFileExtensionValid(_outputPath, ExcelFileExtension, ref msg))
                     {
                         yield return msg;
                     }
@@ -279,13 +284,19 @@ namespace CRFTrainingAuto
                     break;
                 case ExecuteMode.GenVerify:
                 case ExecuteMode.NCRF:
-                    // make sure input is excel file and output folder exist
-                    if (!IsMatchFileExtension(_inputPath, ExcelFileExtension, ref msg))
+
+                    if (!IsDirectoryOrFileExist(_inputPath, ref msg))
                     {
                         yield return msg;
                     }
 
-                    if (!IsDirectoryExist(_outputPath, ref msg))
+                    // make sure input is excel file and output folder exist
+                    if (!IsFileExtensionValid(_inputPath, ExcelFileExtension, ref msg))
+                    {
+                        yield return msg;
+                    }
+
+                    if (!IsDirectoryOrFileExist(_outputPath, ref msg))
                     {
                         yield return msg;
                     }
@@ -293,7 +304,7 @@ namespace CRFTrainingAuto
                     break;
                 case ExecuteMode.GenXlsTestReport:
 
-                    if (!IsMatchFileExtension(_inputPath, TxtFileExtension, ref msg))
+                    if (!IsFileExtensionValid(_inputPath, TxtFileExtension, ref msg))
                     {
                         yield return msg;
                     }
@@ -302,35 +313,52 @@ namespace CRFTrainingAuto
                 case ExecuteMode.GenTrain:
                 case ExecuteMode.GenTest:
 
-                    // make sure input is excel file, output is xml file
-                    if (!IsMatchFileExtension(_inputPath, ExcelFileExtension, ref msg))
+                    if (!IsDirectoryOrFileExist(_inputPath, ref msg))
                     {
                         yield return msg;
                     }
 
-                    if (!IsMatchFileExtension(_outputPath, XmlFileExtension, ref msg, false))
+                    // make sure input is excel file, output is xml file
+                    if (!IsFileExtensionValid(_inputPath, ExcelFileExtension, ref msg))
+                    {
+                        yield return msg;
+                    }
+
+                    if (!IsFileExtensionValid(_outputPath, XmlFileExtension, ref msg))
                     {
                         yield return msg;
                     }
 
                     break;
                 case ExecuteMode.BugFixing:
+
+                    if (!IsDirectoryOrFileExist(_inputPath, ref msg))
+                    {
+                        yield return msg;
+                    }
+
                     // use txt file for bugfixing, the format is like this
                     // 我还差你五元钱。->cha4
                     // 我们离父母的希望还差很远。->cha4
-                    if (!IsMatchFileExtension(_inputPath, TxtFileExtension, ref msg))
+                    if (!IsFileExtensionValid(_inputPath, TxtFileExtension, ref msg))
                     {
                         yield return msg;
                     }
 
                     break;
                 case ExecuteMode.Rand:
-                    if (!IsMatchFileExtension(_inputPath, TxtFileExtension, ref msg))
+
+                    if (!IsDirectoryOrFileExist(_inputPath, ref msg))
                     {
                         yield return msg;
                     }
 
-                    if (!IsDirectoryExist(_outputPath, ref msg))
+                    if (!IsFileExtensionValid(_inputPath, TxtFileExtension, ref msg))
+                    {
+                        yield return msg;
+                    }
+
+                    if (!IsDirectoryOrFileExist(_outputPath, ref msg))
                     {
                         yield return msg;
                     }
@@ -342,7 +370,7 @@ namespace CRFTrainingAuto
                         yield return msg;
                     }
 
-                    if (!IsDirectoryExist(_outputPath, ref msg))
+                    if (!IsDirectoryOrFileExist(_outputPath, ref msg))
                     {
                         yield return msg;
                     }
@@ -350,12 +378,12 @@ namespace CRFTrainingAuto
                     break;
                 case ExecuteMode.Merge:
                     // make sure the directory exist
-                    if (!IsDirectoryExist(Path.GetDirectoryName(_inputPath), ref msg))
+                    if (!IsDirectoryOrFileExist(Path.GetDirectoryName(_inputPath), ref msg))
                     {
                         yield return msg;
                     }
 
-                    if (!IsDirectoryExist(Path.GetDirectoryName(_outputPath), ref msg))
+                    if (!IsDirectoryOrFileExist(Path.GetDirectoryName(_outputPath), ref msg))
                     {
                         yield return msg;
                     }
@@ -392,22 +420,23 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Error message if directory not exist.
+        /// Check directory or file whether exist.
         /// </summary>
-        /// <param name="dirPath">Folder.</param>
+        /// <param name="path">Folder or file path.</param>
         /// <param name="msg">Error message.</param>
         /// <returns>True or false.</returns>
-        private bool IsDirectoryExist(string dirPath, ref string msg)
+        private bool IsDirectoryOrFileExist(string path, ref string msg)
         {
-            if (string.IsNullOrEmpty(dirPath))
+            if (string.IsNullOrEmpty(path))
             {
-                msg = "The directory is empty!";
+                msg = "The path is empty!";
                 return false;
             }
 
-            if (!Directory.Exists(dirPath))
+            if (!Directory.Exists(path)
+            && !File.Exists(path))
             {
-                msg = Helper.NeutralFormat("{0} is not a directory or it doesn't exist!", dirPath);
+                msg = Helper.NeutralFormat("{0} doesn't exist!", path);
                 return false;
             }
 
@@ -420,10 +449,8 @@ namespace CRFTrainingAuto
         /// <param name="filePath">File path.</param>
         /// <param name="extension">Required extension.</param>
         /// <param name="msg">Error message.</param>
-        /// <param name="checkExist">Whether need to check file exist.</param>
         /// <returns>True or false.</returns>
-        //TODO: IsMatchFileExtension
-        private bool IsMatchFileExtension(string filePath, string extension, ref string msg, bool checkExist = true)
+        private bool IsFileExtensionValid(string filePath, string extension, ref string msg)
         {
             if (string.IsNullOrEmpty(filePath))
             {
@@ -431,12 +458,7 @@ namespace CRFTrainingAuto
                 return false;
             }
 
-            if (checkExist && !File.Exists(filePath))
-            {
-                msg = Helper.NeutralFormat("{0} doesn't exist!", filePath);
-                return false;
-            }
-            else if (!string.Equals(Path.GetExtension(filePath), extension))
+            if (!string.Equals(Path.GetExtension(filePath), extension))
             {
                 msg = Helper.NeutralFormat("{0} is not a {1} file!", filePath, extension.Substring(extension.IndexOf(".") + 1));
 

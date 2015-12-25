@@ -30,7 +30,7 @@ namespace CRFTrainingAuto
 
         // target\distrib\debug\{amd64/x86}\dev\TTS\Server\bin\Offline
         private readonly string _offlineToolPathPattern = @"target\distrib\debug\{0}\dev\TTS\Server\bin\Offline";
-        
+
         // private\dev\speech\tts\shenzhou\data\zh-CN\Language\Model.Rule\PolyphonyModel\ModelUsed
         private readonly string _crfModelDirPattern = @"private\dev\speech\tts\shenzhou\data\{0}\Language\Model.Rule\PolyphonyModel\ModelUsed";
         
@@ -238,7 +238,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Gets brach root path.
+        /// Gets branch root path.
         /// </summary>
         public string BranchRootPath
         {
@@ -249,7 +249,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Gets architecure, amd64 or x86.
+        /// Gets architecture, amd64 or x86.
         /// </summary>
         public string Arch
         {

@@ -1,5 +1,5 @@
 ﻿//----------------------------------------------------------------------------
-// <copyright file="ExcelHelper.cs" company="MICROSOFT">
+// <copyright file="ExcelGenerator.cs" company="MICROSOFT">
 //      Copyright (c) Microsoft Corporation.  All rights reserved.
 // </copyright>
 //
@@ -24,7 +24,7 @@ namespace CRFTrainingAuto
     public static class ExcelGenerator
     {
         /// <summary>
-        /// Each Dictionary item contains the case and the pron get from the execel file.
+        /// Each Dictionary item contains the case and the pron get from the excel file.
         /// </summary>
         /// <param name="usedRange">Excel used range.</param>
         /// <param name="useNavtivePhone">If true, the return value's pron is native pron, else use pinyin.</param>
@@ -40,12 +40,12 @@ namespace CRFTrainingAuto
                 {
                     SentenceAndWBResult tempReseult = new SentenceAndWBResult();
 
-                    // first column for case, second column for corrct pron
+                    // first column for case, second column for correct pron
                     string caseVal = Convert.ToString((usedRange.Cells[rowIndex, Util.ExcelCaseColIndex] as Excel.Range).Value2);
 
                     string wbResult = Convert.ToString((usedRange.Cells[rowIndex, Util.ExcelWbColIndex] as Excel.Range).Value2);
 
-                    // if excel doesn't contains the word break result, create a new wrod breaker
+                    // if excel doesn't contains the word break result, create a new word breaker
                     if (!string.IsNullOrEmpty(wbResult))
                     {
                         tempReseult.WBResult = wbResult.SplitBySpace();
@@ -172,13 +172,13 @@ namespace CRFTrainingAuto
                     ++rowIndex;
                 }
 
-                // hide the wb result column
+                // hide the word break result column
                 Excel.Range range = (Excel.Range)xlWorkSheet.Columns[Util.ExcelWbColIndex, Type.Missing];
                 range.EntireColumn.Hidden = true;
 
                 xlWorkSheet.Columns.AutoFit();
 
-                // delte the existing excel file
+                // delete the existing excel file
                 if (File.Exists(outputFilePath))
                 {
                     File.Delete(outputFilePath);
@@ -309,7 +309,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Genereate excel test report from frontmeasure test result
+        /// Generate excel test report from frontmeasure.exe test result
         /// test report is like this:
         /// POLYPHONE: 背
         /// INPUT: (P1)

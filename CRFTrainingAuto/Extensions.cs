@@ -127,7 +127,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Combile word break result to string.
+        /// Combine word break result to string.
         /// </summary>
         /// <example>
         /// Input : 120 平米 城市 庭院 别墅

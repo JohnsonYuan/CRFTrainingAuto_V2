@@ -38,25 +38,31 @@ namespace CRFTrainingAuto
     /// <summary>
     /// CRFModelMapping, used to represent CRFLocalizedMapping.txt line content.
     /// </summary>
-    public struct CRFModelMapping
+    public class CRFModelMapping
     {
+        #region Fields
+
         /// <summary>
         /// The character name.
         /// </summary>
-        public string CharName;
+        private string _charName;
 
         /// <summary>
         /// The CRF model file name.
         /// </summary>
-        public string CrfModelName;
+        private string _crfModelName;
 
         /// <summary>
         /// The status, "Being_used" or "Unused".
         /// </summary>
-        public string Status;
+        private string _status;
+
+        #endregion
+
+        #region Constructors
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="CRFModelMapping"/> struct.
+        /// Initializes a new instance of the <see cref="CRFModelMapping"/> class.
         /// </summary>
         /// <param name="line">The line content.</param>
         public CRFModelMapping(string line)
@@ -76,7 +82,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="CRFModelMapping"/> struct.
+        /// Initializes a new instance of the <see cref="CRFModelMapping"/> class.
         /// </summary>
         /// <param name="charName">Name of the character.</param>
         /// <param name="crfModelName">Name of the CRF model.</param>
@@ -87,6 +93,38 @@ namespace CRFTrainingAuto
             CrfModelName = crfModelName;
             Status = status;
         }
+
+        #endregion
+
+        #region Properties
+        /// <summary>
+        /// Gets or sets the name of the character.
+        /// </summary>
+        public string CharName
+        {
+            get { return _charName; }
+            set { _charName = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the name of the CRF model.
+        /// </summary>
+        public string CrfModelName
+        {
+            get { return _crfModelName; }
+            set { _crfModelName = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the status.
+        /// </summary>
+        public string Status
+        {
+            get { return _status; }
+            set { _status = value; }
+        }
+
+        #endregion
 
         /// <summary>
         /// Performs an explicit conversion from string to <see cref="CRFModelMapping"/>.
@@ -114,6 +152,35 @@ namespace CRFTrainingAuto
     }
 
     /// <summary>
+    /// CRFModelMappingComparer.
+    /// </summary>
+    public class CRFModelMappingComparer : IComparer<CRFModelMapping>
+    {
+        /// <summary>
+        /// Compares the CRFModelMapping.
+        /// </summary>
+        /// <param name="x">The x.</param>
+        /// <param name="y">The y.</param>
+        /// <returns>Compare result.</returns>
+        public int Compare(CRFModelMapping x, CRFModelMapping y)
+        {
+            // Compare y and x first by status property, then by crf model file name, and by char name
+            if (x.Status.CompareTo(y.Status) != 0)
+            {
+                return x.Status.CompareTo(y.Status);
+            }
+            else if (x.CrfModelName.CompareTo(y.CrfModelName) != 0)
+            {
+                return x.CrfModelName.CompareTo(y.CrfModelName);
+            }
+            else
+            {
+                return x.CharName.CompareTo(y.CharName);
+            }
+        }
+    }
+
+    /// <summary>
     /// CRF helper class.
     /// </summary>
     [System.Diagnostics.CodeAnalysis.SuppressMessage("StyleCop.CSharp.NamingRules", "SA1305:FieldNamesMustNotUseHungarianNotation", Justification = "Reviewed.")]
@@ -125,6 +192,10 @@ namespace CRFTrainingAuto
         private static int _processedFileCount = 0;
 
         private object _locker = new object();
+
+        // state used to check the test environment when using frontmeasure.exe run test cases
+        private bool _isTestEnvironmentReady = false;
+
         #endregion
 
         #region Methods
@@ -196,7 +267,7 @@ namespace CRFTrainingAuto
 
         /// <summary>
         /// Select target char from files
-        /// if supply word break result file, then we don't need to use wordbreaker, it's more faster
+        /// if supply word break result file, then we don't need to use word breaker, it's more faster
         /// input file might like:羊城晚报记者林本剑本文来源：金羊网-羊城晚报
         /// word break file might like:羊城 晚报 记者 林 本 剑 本文 来源 ： 金 羊 网 - 羊城 晚报.
         /// </summary>
@@ -276,7 +347,7 @@ namespace CRFTrainingAuto
                             continue;
                         }
 
-                        // if results donesn't contains the curSentence and curSentence contains only one single char
+                        // if results doesn't contains the curSentence and curSentence contains only one single char
                         // then add curSentence to results
                         if (useWbResult &&
                             wbReader.Peek() > -1)
@@ -452,7 +523,7 @@ namespace CRFTrainingAuto
                 Directory.CreateDirectory(finalTrainingFolder);
             }
 
-            // generate scirpt.xml, script.xml = training.xml + testing.xml
+            // generate script.xml, script.xml = training.xml + testing.xml
             ScriptGenerator.GenScript(excelFile, GenerateAction.TrainingScript, finalFolder, Util.ScriptFileName);
 
             // generate training.xml
@@ -464,7 +535,7 @@ namespace CRFTrainingAuto
             // generate test cases to Pron_Polyphony.xml, used to put it to testcase folder
             ScriptGenerator.GenScript(testExcelFilePath, GenerateAction.TestCase, finalFolder, Util.TestCaseFileName);
 
-            // comple and run test
+            // compile and run test
             CompileAndTestInFolder(finalFolder, generatedDataFile);
 
             ////#endregion
@@ -530,7 +601,7 @@ namespace CRFTrainingAuto
                 Directory.CreateDirectory(verifyResultFolder);
             }
 
-            // bacause training script should put in one folder, so we put it in TrainingFolder
+            // because training script should put in one folder, so we put it in TrainingFolder
             string trainingFolder = Path.Combine(verifyResultFolder, Util.TrainingFolderName);
 
             if (!Directory.Exists(trainingFolder))
@@ -600,10 +671,15 @@ namespace CRFTrainingAuto
         /// <param name="genExcelReport">If true, generate the excel report based on test result.</param>
         public void CompileAndTestInFolder(string destDir, string srcDataFile = null, string featuresConfigPath = null, bool genExcelReport = false)
         {
+            // prepare the frontmeasure.exe running required dlls
+            if (!_isTestEnvironmentReady)
+            {
+                PrepareTestEnvironment();
+                _isTestEnvironmentReady = true;
+            }
+
             // generate training.config and feature.config for crf training
             GenCRFTrainingConfig(destDir, featuresConfigPath);
-
-            PrepareTestEnvironment();
 
             // check if the training file exist
             string trainingFolder = Path.Combine(destDir, Util.TrainingFolderName);
@@ -670,7 +746,7 @@ namespace CRFTrainingAuto
                     // generate excel report
                     if (genExcelReport)
                     {
-                        Helper.PrintSuccessMessage("Genereating excel test result");
+                        Helper.PrintSuccessMessage("Generating excel test result");
                         ExcelGenerator.GenExcelTestReport(testLogFile);
                     }
                 }
@@ -712,12 +788,9 @@ namespace CRFTrainingAuto
             string message;
             string crfMappingFilePath = Path.Combine(new DirectoryInfo(crfModelDir).Parent.FullName, Util.CRFMappingFileName);
 
-            // update the mapping file and return the crf model folder should contained crf iles
-            string[] crfFileNames = CompilerHelper.UpdateCRFModelMappingFile(crfMappingFilePath, Path.GetFileName(crfMappingFilePath));
-
-            SdCommand.SdRevertUnchangedFile(crfMappingFilePath, out message);
-
             // make sure ModelUsed folder contains only crf files in CRFLocalizedMapping.txt file, if not, the compiled dat will wrong
+            string[] crfFileNames = CompilerHelper.LoadCRFModelMapping(crfMappingFilePath).Select(c => c.CrfModelName).ToArray();
+
             foreach (string crfPath in Directory.GetFiles(crfModelDir, Util.CRFFileSearchExtension))
             {
                 string fileName = Path.GetFileName(crfPath);
@@ -727,6 +800,10 @@ namespace CRFTrainingAuto
                     Helper.ForcedDeleteFile(crfPath);
                 }
             }
+
+            // update the mapping file and return the crf model folder should contained crf iles
+            CompilerHelper.UpdateCRFModelMappingFile(crfMappingFilePath, LocalConfig.Instance.OutputCRFName);
+            SdCommand.SdRevertUnchangedFile(crfMappingFilePath, out message);
         }
 
         /// <summary>
@@ -765,8 +842,6 @@ namespace CRFTrainingAuto
         /// <param name="outputDir">Parent folder that contains TrainingScript folder.</param>
         public void AppendTrainingScriptAndReRunTest(string bugFixingFilePath, string outputDir)
         {
-            PrepareTestEnvironment();
-
             string trainingFolder = Path.Combine(outputDir, Util.TrainingFolderName);
 
             Helper.ThrowIfDirectoryNotExist(trainingFolder);
@@ -889,7 +964,7 @@ namespace CRFTrainingAuto
         /// Generate report from NCross testResults.
         /// </summary>
         /// <example>
-        /// Frontmeasure test report is like below
+        /// Frontmeasure.exe test report is like below
         /// POLYPHONE: 弹
         /// INPUT: (P1)
         /// 我曾经三次上战场，我上去是要带着光荣弹，最后一颗子弹留给自己的，这绝对的牺牲，这点是西方军队比不了的。
@@ -947,7 +1022,7 @@ namespace CRFTrainingAuto
                 }
             }
 
-            // comput the average radio
+            // compute the average radio
             double aveRadio = radios.Average();
 
             // generate report content
@@ -1003,7 +1078,7 @@ namespace CRFTrainingAuto
                         if (tempTDfile != null)
                         {
                             File.Copy(tempTDfile, Path.Combine(outputDir, LocalConfig.Instance.OutputCRFName), true);
-                            Console.WriteLine("generate file: " + Path.Combine(outputDir, LocalConfig.Instance.OutputCRFName));
+                            Console.WriteLine("Generate file: " + Path.Combine(outputDir, LocalConfig.Instance.OutputCRFName));
                             return true;
                         }
                     }
@@ -1107,7 +1182,7 @@ namespace CRFTrainingAuto
             // delete the existing data file
             Helper.ForcedDeleteFile(generatedFilePath);
 
-            // delete the backup data file, LanguageDataHelper.ReplaceBinaryFile will genereate again
+            // delete the backup data file, LanguageDataHelper.ReplaceBinaryFile will generate again
             string backFilePath = generatedFilePath + ".bak";
             Helper.ForcedDeleteFile(backFilePath);
 
@@ -1163,7 +1238,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Use FrontendMeasure to test testcaseFile and results saved to outputPath
+        /// Use FrontendMeasure to test testcaseFile and save results to outputPath
         /// FrontendMeasure.exe -mode runtest -log "[path]\log.txt" -x "[path]\test.xml".
         /// </summary>
         /// <param name="srcDatFile">Source dat flie path.</param>
@@ -1177,7 +1252,7 @@ namespace CRFTrainingAuto
 
             try
             {
-                // copy generaetd data file to offline\LocaleHandler folder
+                // copy generate data file to offline\LocaleHandler folder
                 string datDestPath = Path.Combine(LocalConfig.Instance.OfflineToolPath, "LocaleHandler", Path.GetFileName(srcDatFile));
 
                 // make sure the destination dat file can be overwrite
@@ -1223,7 +1298,7 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
-        /// Genereate word break result for each file.
+        /// Generate word break result for each file.
         /// </summary>
         /// <param name="wildcard">Input file path, like "D:\corpus\*.txt".</param>
         /// <param name="outputDir">Output folder.</param>
@@ -1251,7 +1326,7 @@ namespace CRFTrainingAuto
             {
                 string[] filesToProcess = inFilePaths.Where((input, index) => (index % tasks.Length == i)).ToArray();
 
-                // start each task nad show process info when this task complete
+                // start each task and show process info when this task complete
                 tasks[i] = Task.Factory.StartNew(() =>
                         {
                             WordBreakFiles(filesToProcess, outputDir);

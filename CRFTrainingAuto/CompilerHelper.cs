@@ -183,34 +183,24 @@ namespace CRFTrainingAuto
             Helper.ThrowIfFileNotExist(filePath);
             Helper.ThrowIfNull(charName);
 
-<<<<<<< HEAD
-            FullRuleFile polyRuleFile = new FullRuleFile();
-=======
-            PolyRuleFileHelper polyRuleFile = new PolyRuleFileHelper();
->>>>>>> ece98cee2355d1d684eaa3037e5397be7eeb124b
+            RuleFile polyRuleFile = new RuleFile();
 
             try
             {
-                polyRuleFile.Load(filePath);
+                polyRuleFile.Load(filePath, true);
 
-<<<<<<< HEAD
                 Collection<RuleItem> ruleItems = polyRuleFile.RuleItems;
-=======
-                List<RuleItem> ruleItems = polyRuleFile.RuleItems;
->>>>>>> ece98cee2355d1d684eaa3037e5397be7eeb124b
 
-                RuleItem charItem = ruleItems.FirstOrDefault(r => r.DomainTag == Microsoft.Tts.Offline.Core.DomainItem.GeneralDomain);
+                RuleItem charItem = ruleItems.FirstOrDefault(
+                    r => string.Equals(System.Text.RegularExpressions.Regex.Match(r.EntryString, RuleFile.KeyLineRegex).Groups[1].Value, LocalConfig.Instance.CharName) &&
+                         r.DomainTag == Microsoft.Tts.Offline.Core.DomainItem.GeneralDomain);
 
                 if (charItem != null)
                 {
                     string lastRuleContent = charItem.RuleContent.LastOrDefault();
                     Helper.ThrowIfNull(lastRuleContent);
 
-<<<<<<< HEAD
                     if (RuleFile.IsPolyRuleDefaultRule(lastRuleContent))
-=======
-                    if (polyRuleFile.IsPolyRuleDefaultRule(lastRuleContent))
->>>>>>> ece98cee2355d1d684eaa3037e5397be7eeb124b
                     {
                         // if current item only contains All >= rule , then remove this item
                         if (charItem.RuleContent.Count == 1)
@@ -225,9 +215,11 @@ namespace CRFTrainingAuto
                         string message;
                         SdCommand.SdCheckoutFile(filePath, out message);
 
-                        polyRuleFile.Save(filePath);
+                        polyRuleFile.Save(filePath, true);
 
                         Helper.PrintSuccessMessage(message);
+
+                        return true;
                     }
                 }
             }
@@ -254,103 +246,52 @@ namespace CRFTrainingAuto
         /// <param name="filePath">Crf mapping file path.</param>
         /// <param name="crfFileName">Crf file name.</param>
         /// <returns>Crf model files array, like bei.crf, wei.crf.</returns>
-        /* TODO
-
-        You still don't get the soul. 
-option1: There's already a load method, can also have a save method, save maps after edit.
-
-option2: if you don't want to have another method, just use a streamwriter, write every edit/add map item into file. 
-
-        The implementation is too verbose, try this:
-struct CRFModelMapping
-{
-       string char;
-       string crfModelName;
-       string status;
-
-       CRFModelMapping(string line)
-       {
-                 line.split()
-                 char = [0];
-                 cfrModelName = [2];
-                 status = [3];
-       }
-
-       override ToString()
-       {
-                return string.Format("{0}->{1}{2}");
-       }
-}
-
-string[] UpdateCRFModelMappingFile(string filePath, string crfFileName)
-{
-        List<CRFModelMapping> maps = Load(filePath);
-        foreach(var map in maps )
-        {
-                  // update or not
-                  // save to streamwriter or something else
-                  map.ToString();
-        }
-}
-
-        
-        */
         public static string[] UpdateCRFModelMappingFile(string filePath, string crfFileName)
         {
             Helper.ThrowIfFileNotExist(filePath);
 
-            string message;
-            SdCommand.SdCheckoutFile(filePath, out message);
-            Helper.PrintSuccessMessage(message);
+            bool needAddOn = true;
+            bool needModify = false;
 
-            var crfMappings = LoadCRFModelMapping(filePath);
+            var crfMappings = LoadCRFModelMapping(filePath).ToList();
 
-            // line number start index is 2, the mapping file first line won't change
-            int lineNumber = 2;
-            bool needModify = true;
-            bool charExist = false;
-
-            foreach (CRFModelMapping mapping in crfMappings)
+            for (int i = 0; i < crfMappings.Count; i++)
             {
-                string currentChar = mapping.CharName;
-                string currentCrfFile = mapping.CrfModelName;
-                string currentStatus = mapping.Status;
-
-                // if current line's char is same with charName para, check whether need to modify this line
-                if (string.Equals(currentChar, LocalConfig.Instance.CharName))
+                if (string.Equals(crfMappings[i].CrfModelName, crfFileName))
                 {
-                    // if crf file name and using info are same, don't modify
-                    // else edit thie line
-                    if (string.Equals(currentCrfFile, crfFileName) &&
-                        string.Equals(currentStatus, Util.CRFMappingFileBeingUsedValue))
-                    {
-                        needModify = false;
-                    }
-                    else
-                    {
-                        charExist = true;
-                    }
-                }
+                    needAddOn = false;
 
-                ++lineNumber;
+                    if (!string.Equals(crfMappings[i].Status, Util.CRFMappingFileBeingUsedValue))
+                    {
+                        crfMappings[i].Status = Util.CRFMappingFileBeingUsedValue;
+                        needModify = true;
+                    }
+
+                    break;
+                }
+            }
+
+            if (needAddOn)
+            {
+                crfMappings.Add(new CRFModelMapping(
+                    LocalConfig.Instance.CharName,
+                    crfFileName,
+                    Util.CRFMappingFileBeingUsedValue));
+
+                needModify = true;
             }
 
             if (needModify)
             {
-                string content = Helper.NeutralFormat("{0}\t->\t{1}\t{2}", LocalConfig.Instance.CharName, crfFileName, Util.CRFMappingFileBeingUsedValue);
-                Util.EditLineInFile(filePath, lineNumber, content, !charExist);
-            }
-
-            // if the newly char not exist, update the crfMappings variable
-            if (!charExist)
-            {
-                crfMappings = LoadCRFModelMapping(filePath);
+                string message;
+                SdCommand.SdCheckoutFile(filePath, out message);
+                Helper.PrintSuccessMessage(message);
+                SaveCRFModelMapping(filePath, crfMappings.ToArray());
             }
 
             return crfMappings.Select(m => m.CrfModelName).ToArray();
         }
 
-        // TODO: You use it just for skipping the header? Do you really don't have other concise method?
         /// <summary>
         /// Loads the CRF model mapping.
         /// </summary>
@@ -358,24 +299,39 @@ string[] UpdateCRFModelMappingFile(string filePath, string crfFileName)
         /// <returns>List collection of CRFModelMapping in this file.</returns>
         public static IEnumerable<CRFModelMapping> LoadCRFModelMapping(string filePath)
         {
-            int lineNumber = 1;
-
             using (StreamReader reader = new StreamReader(filePath))
             {
-                for (string line = reader.ReadLine(); line != null; line = reader.ReadLine())
+                while (!reader.EndOfStream)
                 {
-                    // if the first line matches, then continue to read
-                    if (lineNumber == 1 &&
-                        !string.Equals(Util.CRFMappingFileFirstLineContent, line))
+                    string line = reader.ReadLine();
+
+                    if (line.TrimStart().StartsWith("Map"))
                     {
-                        throw new FormatException(Helper.NeutralFormat("{0} mapping file has the wrong format!", filePath));
-                    }
-                    else if (lineNumber > 1)
-                    {
-                        yield return (CRFModelMapping)line;
+                        continue; // This is a file header.
                     }
 
-                    ++lineNumber;
+                    yield return (CRFModelMapping)line;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Saves the CRF model mapping.
+        /// </summary>
+        /// <param name="filePath">The file path.</param>
+        /// <param name="crfMappings">The CRF mappings.</param>
+        public static void SaveCRFModelMapping(string filePath, CRFModelMapping[] crfMappings)
+        {
+            // sort the mapping array by status property
+            Array.Sort(crfMappings, new CRFModelMappingComparer());
+
+            using (StreamWriter writer = new StreamWriter(filePath, false, System.Text.Encoding.Unicode))
+            {
+                writer.WriteLine(Util.CRFMappingFileFirstLineContent);
+
+                foreach (CRFModelMapping mapping in crfMappings)
+                {
+                    writer.WriteLine(mapping.ToString());
                 }
             }
         }

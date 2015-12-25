@@ -71,10 +71,10 @@ namespace CRFTrainingAuto
 
             try
             {
-                if (ExcelHelper.VerifyExcelSheet(xlWorkSheet))
+                if (ExcelGenerator.VerifyExcelSheet(xlWorkSheet))
                 {
                     // load cases and prons
-                    Dictionary<SentenceAndWBResult, string> caseAndProns = ExcelHelper.GetCaseAndPronsFromExcel(range);
+                    Dictionary<SentenceAndWBResult, string> caseAndProns = ExcelGenerator.GetCaseAndPronsFromExcel(range);
                     string outputFilePath;
                     switch (action)
                     {
@@ -120,9 +120,9 @@ namespace CRFTrainingAuto
                     xlApp.Quit();
                 }
 
-                ExcelHelper.ReleaseExcelObject(xlWorkSheet);
-                ExcelHelper.ReleaseExcelObject(xlWorkBook);
-                ExcelHelper.ReleaseExcelObject(xlApp);
+                ExcelGenerator.ReleaseExcelObject(xlWorkSheet);
+                ExcelGenerator.ReleaseExcelObject(xlWorkBook);
+                ExcelGenerator.ReleaseExcelObject(xlApp);
             }
         }
 
@@ -215,7 +215,7 @@ namespace CRFTrainingAuto
                 xtw.WriteEndDocument();
             }
 
-            // genereate a txt file with same name for clear look
+            // generate a txt file with same name for clear look
             File.WriteAllLines(Util.GetFilePathWithNewExtension(outputFilePath, Util.TxtFileExtension), caseAndPronsWithWb.Keys.Select(s => s.Content));
 
             Console.WriteLine("Generate test case " + outputFilePath);
@@ -253,7 +253,7 @@ namespace CRFTrainingAuto
         /// Generate training script, if specify the existing script, output file's start index continue with existing script file.
         /// </summary>
         /// <example>
-        /// Training scirpt example:
+        /// Training script example:
         /// <script language="zh-CN" xmlns="http://schemas.microsoft.com/tts">
         ///   <si id="0000000861">
         ///     <text>莹莹水润的Q弹啫喱质地，脂玉一般清润透亮的色泽，极为清淡的植物清香，很”美味“的样子。</text>
@@ -277,7 +277,7 @@ namespace CRFTrainingAuto
         {
             int startId = 1;
 
-            // if existing script file exist, the generate item's id attribute should be continuted, else start with 1
+            // if existing script file exist, the generate item's id attribute should be continue, else start with 1
             if (!string.IsNullOrEmpty(startIndexOrFilePath))
             {
                 try
@@ -338,7 +338,7 @@ namespace CRFTrainingAuto
 
             result.Save(outputFilePath, System.Text.Encoding.Unicode);
 
-            // genereate a txt file with same name for clear look
+            // generate a txt file with same name for clear look
             File.WriteAllLines(
                                Util.GetFilePathWithNewExtension(outputFilePath, Util.TxtFileExtension),
                                caseAndProns.Keys);
