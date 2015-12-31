@@ -106,22 +106,22 @@ namespace CRFTrainingAuto
         #region Fields used by command line parser
 
         [Argument("mode", Description = "Specifies the execute mode: FilterChar, CompileAndTest, NCRF, GenVerify, GenXlsTestReport, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge",
-            Optional = false, UsagePlaceholder = "executeMode", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge, Rand")]
+            Optional = false, UsagePlaceholder = "executeMode", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge")]
         private string _mode = string.Empty;
 
-        [Argument("config", Description = "config file path", Optional = false, UsagePlaceholder = "configPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Merge, Rand")]
+        [Argument("config", Description = "config file path", Optional = false, UsagePlaceholder = "configPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Merge")]
         private string _configPath = string.Empty;
 
         [Argument("i", Description = "input path",
-            Optional = true, UsagePlaceholder = "inputPath", RequiredModes = "FilterChar, NCRF, GenVerify, Compile, GenXlsTestReport, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge, Rand")]
+            Optional = true, UsagePlaceholder = "inputPath", RequiredModes = "FilterChar, NCRF, GenVerify, Compile, GenXlsTestReport, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge")]
         private string _inputPath = string.Empty;
 
         [Argument("o", Description = "output path",
-            Optional = true, UsagePlaceholder = "outputPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge, Rand")]
+            Optional = true, UsagePlaceholder = "outputPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge")]
         private string _outputPath = string.Empty;
 
         [Argument("wbFolder", Description = "word break result folder",
-            Optional = true, UsagePlaceholder = "wbPath", OptionalModes = "FilterChar, WB")]
+            Optional = true, UsagePlaceholder = "wbPath", OptionalModes = "FilterChar")]
         private string _wordBreakPath = string.Empty;
 
         [Argument("u", Description = "split unit(GB, MB, KB, Byte)",
