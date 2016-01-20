@@ -13,6 +13,7 @@ namespace CRFTrainingAuto
     using System.Collections.Generic;
     using System.IO;
     using System.Text;
+    using System.Xml;
     using Microsoft.Tts.Offline.Utility;
 
     /// <summary>
@@ -41,6 +42,7 @@ namespace CRFTrainingAuto
         // Excel first column for case, second column for corrct pron
         internal const int ExcelCaseColIndex = 1;
         internal const string ExcelCaseColTitle = "case";
+        internal const int ExcelCaseColWidth = 200;
         internal const int ExcelCorrectPronColIndex = 2;
         internal const string ExcelCorrectPronColTitle = "correct pron";
         internal const int ExcelCommentColIndex = 3;
@@ -48,7 +50,6 @@ namespace CRFTrainingAuto
         internal const int ExcelWbColIndex = 4;
         internal const string ExcelWbColTitle = "wb result";
 
-        // Use 1000 for N cross folder test
         // Temp folder store filtered corpus data
         internal const string TempFolderName = "temp";
         internal const string ExcelFileExtension = ".xls";
@@ -549,6 +550,43 @@ namespace CRFTrainingAuto
             }
             
             return senAndProns;
+        }
+
+        /// <summary>
+        /// Import test cases from source to destination.
+        /// After BugFixing execution mode, can use this command import the newly test cases to destination.
+        /// </summary>
+        /// <param name="sourceFile">Source xml test case file path.</param>
+        /// <param name="destFile">Destination xml test case file path.</param>
+        public static void ImportTestCase(string sourceFile, string destFile)
+        {
+            Helper.ThrowIfFileNotExist(sourceFile);
+            Helper.ThrowIfFileNotExist(destFile);
+
+            XmlDocument sourceDoc = new XmlDocument();
+            sourceDoc.Load(sourceFile);
+
+            if (sourceDoc.DocumentElement.ChildNodes == null
+                && sourceDoc.DocumentElement.ChildNodes.Count == 0)
+            {
+                Helper.PrintColorMessageToOutput(ConsoleColor.Red, Helper.NeutralFormat("File {0} doesn't contains cases.", sourceFile));
+            }
+
+            string message;
+            SdCommand.SdCheckoutFile(destFile, out message);
+            Helper.PrintSuccessMessage(message);
+
+            XmlDocument destDoc = new XmlDocument();
+            destDoc.Load(destFile);
+
+            foreach (XmlNode child in sourceDoc.DocumentElement.ChildNodes)
+            {
+                destDoc.DocumentElement.AppendChild(destDoc.ImportNode(child, true));
+            }
+
+            destDoc.Save(destFile);
+
+            Helper.PrintSuccessMessage(Helper.NeutralFormat("Import cases from {0} to {1}.", sourceFile, destFile));
         }
 
         #endregion

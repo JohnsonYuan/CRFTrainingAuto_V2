@@ -80,14 +80,14 @@ namespace CRFTrainingAuto
         Split,
 
         /// <summary>
-        /// Merge files to one file.
+        /// Merge txt corpus files to one file.
         /// </summary>
         Merge,
 
         /// <summary>
-        /// Random select cases.
+        /// Import test cases from input to output.
         /// </summary>
-        Rand,
+        ImportTestcase
     }
 
     /// <summary>
@@ -105,19 +105,19 @@ namespace CRFTrainingAuto
 
         #region Fields used by command line parser
 
-        [Argument("mode", Description = "Specifies the execute mode: FilterChar, CompileAndTest, NCRF, GenVerify, GenXlsTestReport, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge",
-            Optional = false, UsagePlaceholder = "executeMode", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge")]
+        [Argument("mode", Description = "Specifies the execute mode: FilterChar, CompileAndTest, NCRF, GenVerify, GenXlsTestReport, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge, ImportTestcase",
+            Optional = false, UsagePlaceholder = "executeMode", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge, ImportTestcase")]
         private string _mode = string.Empty;
 
-        [Argument("config", Description = "config file path", Optional = false, UsagePlaceholder = "configPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Merge")]
+        [Argument("config", Description = "config file path", Optional = false, UsagePlaceholder = "configPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXlsTestReport, Compile, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Merge, ImportTestcase")]
         private string _configPath = string.Empty;
 
         [Argument("i", Description = "input path",
-            Optional = true, UsagePlaceholder = "inputPath", RequiredModes = "FilterChar, NCRF, GenVerify, Compile, GenXlsTestReport, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge")]
+            Optional = true, UsagePlaceholder = "inputPath", RequiredModes = "FilterChar, NCRF, GenVerify, Compile, GenXlsTestReport, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge, ImportTestcase")]
         private string _inputPath = string.Empty;
 
         [Argument("o", Description = "output path",
-            Optional = true, UsagePlaceholder = "outputPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge")]
+            Optional = true, UsagePlaceholder = "outputPath", RequiredModes = "FilterChar, NCRF, GenVerify, GenXls, GenTrain, GenTest, BugFixing, WB, SS, Split, Merge, ImportTestcase")]
         private string _outputPath = string.Empty;
 
         [Argument("wbFolder", Description = "word break result folder",
@@ -346,24 +346,6 @@ namespace CRFTrainingAuto
                     }
 
                     break;
-                case ExecuteMode.Rand:
-
-                    if (!IsDirectoryOrFileExist(_inputPath, ref msg))
-                    {
-                        yield return msg;
-                    }
-
-                    if (!IsFileExtensionValid(_inputPath, TxtFileExtension, ref msg))
-                    {
-                        yield return msg;
-                    }
-
-                    if (!IsDirectoryOrFileExist(_outputPath, ref msg))
-                    {
-                        yield return msg;
-                    }
-
-                    break;
                 case ExecuteMode.Split:
                     if (!IsFileExist(_inputPath, ref msg))
                     {
@@ -384,6 +366,29 @@ namespace CRFTrainingAuto
                     }
 
                     if (!IsDirectoryOrFileExist(Path.GetDirectoryName(_outputPath), ref msg))
+                    {
+                        yield return msg;
+                    }
+
+                    break;
+                case ExecuteMode.ImportTestcase:
+
+                    if (!IsFileExist(_inputPath, ref msg))
+                    {
+                        yield return msg;
+                    }
+
+                    if (!IsFileExist(_outputPath, ref msg))
+                    {
+                        yield return msg;
+                    }
+
+                    if (!IsFileExtensionValid(_inputPath, XmlFileExtension, ref msg))
+                    {
+                        yield return msg;
+                    }
+
+                    if (!IsFileExtensionValid(_outputPath, XmlFileExtension, ref msg))
                     {
                         yield return msg;
                     }

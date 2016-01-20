@@ -244,9 +244,10 @@ namespace CRFTrainingAuto
         /// 系 -> xi.crf Unused.
         /// </example>
         /// <param name="filePath">Crf mapping file path.</param>
+        /// <param name="crfCharName">Crf char name.</param>
         /// <param name="crfFileName">Crf file name.</param>
         /// <returns>Crf model files array, like bei.crf, wei.crf.</returns>
-        public static string[] UpdateCRFModelMappingFile(string filePath, string crfFileName)
+        public static string[] UpdateCRFModelMappingFile(string filePath, string crfCharName, string crfFileName)
         {
             Helper.ThrowIfFileNotExist(filePath);
 
@@ -257,7 +258,8 @@ namespace CRFTrainingAuto
 
             for (int i = 0; i < crfMappings.Count; i++)
             {
-                if (string.Equals(crfMappings[i].CrfModelName, crfFileName))
+                if (string.Equals(crfMappings[i].CharName, crfCharName)
+                    && string.Equals(crfMappings[i].CrfModelName, crfFileName))
                 {
                     needAddOn = false;
 

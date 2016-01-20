@@ -42,11 +42,11 @@ namespace CRFTrainingAuto
             if (errors.Count() != 0)
             {
                 Helper.PrintSuccessMessage("Arguments you provided has some error");
+                Console.WriteLine();
 
                 foreach (var error in errors)
                 {
                     Helper.PrintColorMessageToOutput(ConsoleColor.Red, error);
-                    Console.WriteLine();
                 }
 
                 return ExitCode.InvalidArgument;
@@ -81,6 +81,7 @@ namespace CRFTrainingAuto
                     break;
                 case ExecuteMode.Compile:
                     // InputPath is folder
+                    crfHelper.PrepareTestEnvironment();
                     crfHelper.CompileAndTestInFolder(arguments.InputPath);
                     break;
                 case ExecuteMode.GenXls:
@@ -111,6 +112,10 @@ namespace CRFTrainingAuto
                 case ExecuteMode.Merge:
                     // InputPath, OutputPath are all folders
                     crfHelper.MergeAndRandom(arguments.InputPath, arguments.OutputPath);
+                    break;
+                case ExecuteMode.ImportTestcase:
+                    // InputPath, OutputPath are xml test case files
+                    Util.ImportTestCase(arguments.InputPath, arguments.OutputPath);
                     break;
                 case ExecuteMode.Split:
                     SplitFile(arguments.SplitUnit, arguments.SplitSize, arguments.InputPath, arguments.OutputPath);

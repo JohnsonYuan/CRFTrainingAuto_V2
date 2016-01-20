@@ -55,8 +55,10 @@ namespace CRFTrainingAuto
         private string _crfModelDir;
         private string _defaultWordPron;
         private int _minCaseLength;
+        private int _maxCaseLength;
         private int _maxCaseCount;
         private int _nCrossCaseCount;
+        private int _bufferCaseCount;
         private int _nFolderCount;
         private Dictionary<string, string> _prons = new Dictionary<string, string>();
         private string _branchRootPath;
@@ -194,6 +196,17 @@ namespace CRFTrainingAuto
         }
 
         /// <summary>
+        /// Gets filtered case max length.
+        /// </summary>
+        public int MaxCaseLength
+        {
+            get
+            {
+                return this._maxCaseLength;
+            }
+        }
+
+        /// <summary>
         /// Gets max case count used to train crf model.
         /// </summary>
         public int MaxCaseCount
@@ -201,6 +214,17 @@ namespace CRFTrainingAuto
             get
             {
                 return this._maxCaseCount;
+            }
+        }
+
+        /// <summary>
+        /// Gets buffer case count when filtering data.
+        /// </summary>
+        public int BufferCaseCount
+        {
+            get
+            {
+                return this._bufferCaseCount;
             }
         }
 
@@ -436,6 +460,19 @@ namespace CRFTrainingAuto
                 }
             }
 
+            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:MaxCaseLength", nsmgr);
+            if (node != null)
+            {
+                try
+                {
+                    this._maxCaseLength = int.Parse(node.InnerText);
+                }
+                catch
+                {
+                    throw new FormatException("MaxCaseLength is not a number!");
+                }
+            }
+
             node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:MaxCaseCount", nsmgr);
             if (node != null)
             {
@@ -446,6 +483,19 @@ namespace CRFTrainingAuto
                 catch
                 {
                     throw new FormatException("MaxCaseCount is not a number!");
+                }
+            }
+
+            node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:BufferCaseCount", nsmgr);
+            if (node != null)
+            {
+                try
+                {
+                    this._bufferCaseCount = int.Parse(node.InnerText);
+                }
+                catch
+                {
+                    throw new FormatException("BufferCaseCount is not a number!");
                 }
             }
 

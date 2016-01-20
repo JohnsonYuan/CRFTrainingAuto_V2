@@ -176,8 +176,6 @@ namespace CRFTrainingAuto
                 Excel.Range range = (Excel.Range)xlWorkSheet.Columns[Util.ExcelWbColIndex, Type.Missing];
                 range.EntireColumn.Hidden = true;
 
-                xlWorkSheet.Columns.AutoFit();
-
                 // delete the existing excel file
                 if (File.Exists(outputFilePath))
                 {
@@ -324,10 +322,22 @@ namespace CRFTrainingAuto
         {
             Helper.ThrowIfFileNotExist(testResultFile);
 
-            // we need INPUT: (P1), EXPECTED, RESULT as result
+            // we need INPUT: (P1), EXPECTED, RESULT from test report file
             List<string> inputLines = new List<string>();
             List<string> expectedLines = new List<string>();
             List<string> resultLines = new List<string>();
+
+            // kepp all lines, used to find line number for case
+            List<string> allLines = null;
+
+            string allCasesFile = Util.GetFilePathWithNewExtension(
+                Path.Combine(Path.GetDirectoryName(testResultFile), Util.TestCaseFileName),
+                Util.TxtFileExtension);
+
+            if (File.Exists(allCasesFile))
+            {
+                allLines = File.ReadAllLines(allCasesFile).ToList();
+            }
 
             // find the wrod do the test
             using (StreamReader reader = new StreamReader(testResultFile))
@@ -381,33 +391,68 @@ namespace CRFTrainingAuto
 
                 try
                 {
+                    const int FirstColNum = 1;
+                    const int SecondColNum = 2;
+                    const int ThirdColNum = 3;
+                    const int ForthColNum = 4;
+                    const int FifthColNum = 5;
+                    const int SixthColNum = 6;
+
                     xlWorkSheet.Name = LocalConfig.Instance.CharName;
-                    xlWorkSheet.Cells[1, 1] = "input";
-                    xlWorkSheet.Cells[1, 2] = "expected";
-                    xlWorkSheet.Cells[1, 3] = "result";
+                    xlWorkSheet.Cells[1, FirstColNum] = "line";
+                    xlWorkSheet.Cells[1, SecondColNum] = "input";
+                    xlWorkSheet.Cells[1, ThirdColNum] = "expected(pinyin)";
+                    xlWorkSheet.Cells[1, ForthColNum] = "result(pinyin)";
+                    xlWorkSheet.Cells[1, FifthColNum] = "expected";
+                    xlWorkSheet.Cells[1, SixthColNum] = "result";
 
                     int rowIndex = 2;
+                    int lineNumber = -1;
 
                     for (int i = 0; i < inputLines.Count; i++)
                     {
-                        xlWorkSheet.Cells[rowIndex, 1] = inputLines[i];
+                        if (allLines != null)
+                        {
+                            lineNumber = allLines.IndexOf(inputLines[i]);
+                        }
+
+                        xlWorkSheet.Cells[rowIndex, FirstColNum] = lineNumber + 1;
+
+                        xlWorkSheet.Cells[rowIndex, SecondColNum] = inputLines[i];
 
                         // highlight the target cahr
                         Excel.Range xlRange = (Excel.Range)xlWorkSheet.Cells[rowIndex, 1];
                         int startIndex = inputLines[i].GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, wordBreaker);
-                        
+
                         if (startIndex > -1)
                         {
-                            xlRange.Characters[startIndex + 1, 1].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
+                            xlRange.Characters[startIndex + 1, SecondColNum].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
                         }
 
-                        xlWorkSheet.Cells[rowIndex, 2] = expectedLines[i];
-                        xlWorkSheet.Cells[rowIndex, 3] = resultLines[i];
+                        var findResult = LocalConfig.Instance.Prons.FirstOrDefault(p => string.Equals(p.Value, expectedLines[i]));
+
+                        if (findResult.Key != null)
+                        {
+                            xlWorkSheet.Cells[rowIndex, ThirdColNum] = findResult.Key;
+                        }
+
+                        findResult = LocalConfig.Instance.Prons.FirstOrDefault(p => string.Equals(p.Value, resultLines[i]));
+
+                        if (findResult.Key != null)
+                        {
+                            xlWorkSheet.Cells[rowIndex, ForthColNum] = findResult.Key;
+                        }
+
+                        xlWorkSheet.Cells[rowIndex, FifthColNum] = expectedLines[i];
+                        xlWorkSheet.Cells[rowIndex, SixthColNum] = resultLines[i];
 
                         ++rowIndex;
                     }
 
-                    xlWorkSheet.Columns.AutoFit();
+                    // wrap the second column
+                    string columnValue = string.Format("B{0}", Util.ExcelCaseColIndex);
+                    xlWorkSheet.Range[columnValue].EntireColumn.WrapText = true;
+                    xlWorkSheet.Range[columnValue].EntireColumn.ColumnWidth = Util.ExcelCaseColWidth;
 
                     string outputFilePath = Path.Combine(Path.GetDirectoryName(testResultFile), Util.VerifyResultExcelFileName);
 
@@ -478,7 +523,7 @@ namespace CRFTrainingAuto
                 var testingcaseAndProns = caseAndProns.Where((kvPair, index) =>
                     index >= i * Count && index < (i + 1) * Count);
                 var trainingcaseAndProns = caseAndProns.Where((kvPair, index) =>
-                    (index >= 0 && index < i * Count) || (index >= (i + 1) * Count && index < 1000));
+                    (index >= 0 && index < i * Count) || (index >= (i + 1) * Count && index < LocalConfig.Instance.NCrossCaseCount));
 
                 string dirPath = Path.Combine(outputDir, (i + 1).ToString());
                 string trainingFolder = Path.Combine(dirPath, Util.TrainingFolderName);
@@ -552,7 +597,7 @@ namespace CRFTrainingAuto
                 xlWorkSheet.Cells[1, Util.ExcelWbColIndex] = Util.ExcelWbColTitle;
 
                 var allCases = Util.GetSenAndWbFromCorpus(inFilePath, hasWbResult);
-                
+
                 // Excel start index is 1, the content row start 2
                 int rowIndex = 2;
 
@@ -561,10 +606,25 @@ namespace CRFTrainingAuto
                 {
                     xlWorkSheet.Cells[rowIndex, Util.ExcelCaseColIndex] = allCases[i].Content;
 
+                    // add the list validation rule for pronunciation column
+                    var pronCell = (Excel.Range)xlWorkSheet.Cells[rowIndex, Util.ExcelCorrectPronColIndex];
+                    string pronList = string.Join(",", LocalConfig.Instance.Prons.Keys);
+
+                    pronCell.Validation.Delete();
+                    pronCell.Validation.Add(
+                        Excel.XlDVType.xlValidateList,
+                        Excel.XlDVAlertStyle.xlValidAlertInformation,
+                        Excel.XlFormatConditionOperator.xlBetween,
+                        pronList,
+                        Type.Missing);
+
+                    pronCell.Validation.IgnoreBlank = true;
+                    pronCell.Validation.InCellDropdown = true;
+
                     // highlight the training character
-                    Excel.Range xlRange = (Excel.Range)xlWorkSheet.Cells[rowIndex, 1];
+                    Excel.Range caseCell = (Excel.Range)xlWorkSheet.Cells[rowIndex, Util.ExcelCaseColIndex];
                     int startIndex = allCases[i].Content.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, allCases[i].WBResult);
-                    xlRange.Characters[startIndex + 1, Util.ExcelCaseColIndex].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
+                    caseCell.Characters[startIndex + 1, Util.ExcelCaseColIndex].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
 
                     xlWorkSheet.Cells[rowIndex, Util.ExcelWbColIndex] = allCases[i].WBResult.SpaceSeparate();
 
@@ -572,6 +632,10 @@ namespace CRFTrainingAuto
                 }
 
                 xlWorkSheet.Columns.AutoFit();
+
+                string columnValue = string.Format("A{0}", Util.ExcelCaseColIndex);
+                xlWorkSheet.Range[columnValue].EntireColumn.WrapText = true;
+                xlWorkSheet.Range[columnValue].EntireColumn.ColumnWidth = Util.ExcelCaseColWidth;
 
                 // hide the wb result column
                 Excel.Range range = (Excel.Range)xlWorkSheet.Columns[Util.ExcelWbColIndex, Type.Missing];

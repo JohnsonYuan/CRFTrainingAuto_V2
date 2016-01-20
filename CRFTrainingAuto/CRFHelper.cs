@@ -190,11 +190,7 @@ namespace CRFTrainingAuto
         #region Fields
 
         private static int _processedFileCount = 0;
-
         private object _locker = new object();
-
-        // state used to check the test environment when using frontmeasure.exe run test cases
-        private bool _isTestEnvironmentReady = false;
 
         #endregion
 
@@ -286,36 +282,35 @@ namespace CRFTrainingAuto
             }
 
             WordBreaker wordBreaker = null;
+            StreamReader fileReader = null;
 
-            foreach (string filePath in fileProcessed)
+            // reader for word break result file
+            StreamReader wbReader = null;
+
+            try
             {
-                string fileName = Path.GetFileName(filePath);
-
-                // if the filtered file already exist, skip this file
-                string tempFilePath = Path.Combine(outputDir, fileName);
-
-                if (File.Exists(tempFilePath))
+                foreach (string filePath in fileProcessed)
                 {
-                    lock (_locker)
+                    string fileName = Path.GetFileName(filePath);
+
+                    // if the filtered file already exist, skip this file
+                    string tempFilePath = Path.Combine(outputDir, fileName);
+
+                    if (File.Exists(tempFilePath))
                     {
-                        ++_processedFileCount;
+                        lock (_locker)
+                        {
+                            ++_processedFileCount;
+                        }
+
+                        Console.WriteLine("File " + fileName + " exist, skipped!");
+                        continue;
                     }
 
-                    Console.WriteLine("File " + fileName + " exist, skipped!");
-                    continue;
-                }
+                    HashSet<string> results = new HashSet<string>();
 
-                HashSet<string> results = new HashSet<string>();
+                    int foundCount = 0;
 
-                int foundCount = 0;
-
-                StreamReader fileReader = null;
-
-                // reader for word break result file
-                StreamReader wbReader = null;
-
-                try
-                {
                     fileReader = new StreamReader(filePath);
 
                     string wbFilePath = Path.Combine(wbDir, fileName);
@@ -406,22 +401,27 @@ namespace CRFTrainingAuto
 
                     Console.WriteLine(Helper.NeutralFormat("Found {0} results in file {1}.", foundCount, fileName));
                 }
-                finally
+            }
+            catch
+            {
+                throw;
+            }
+            finally
+            {
+                if (wordBreaker != null)
                 {
-                    if (wordBreaker != null)
-                    {
-                        wordBreaker.Dispose();
-                    }
+                    wordBreaker.Dispose();
+                    wordBreaker = null;
+                }
 
-                    if (fileReader != null)
-                    {
-                        fileReader.Dispose();
-                    }
+                if (fileReader != null)
+                {
+                    fileReader.Dispose();
+                }
 
-                    if (wbReader != null)
-                    {
-                        wbReader.Dispose();
-                    }
+                if (wbReader != null)
+                {
+                    wbReader.Dispose();
                 }
             }
         }
@@ -437,10 +437,19 @@ namespace CRFTrainingAuto
         {
             var inputs = Util.GetSenAndWbFromCorpus(inFilePath);
 
-            // check whether can random select   
+            // check whether can random select, at least we need MaxCaseCount cases
+            int randomCaseCount = LocalConfig.Instance.MaxCaseCount + LocalConfig.Instance.BufferCaseCount;
+
+            // The min case count is LocalConfig.Instance.MaxCaseCount, it will select LocalConfig.Instance.MaxCaseCount if input file doesn't contains (LocalConfig.Instance.MaxCaseCount + LocalConfig.Instance.BufferCaseCount) cases
             if (inputs.Count < LocalConfig.Instance.MaxCaseCount)
             {
                 return null;
+            }
+            else if (inputs.Count < randomCaseCount)
+            {
+                Helper.PrintColorMessageToOutput(ConsoleColor.Red, Helper.NeutralFormat("The input file doesn't contains {0} cases, will save {1} cases.", randomCaseCount, LocalConfig.Instance.MaxCaseCount));
+
+                randomCaseCount = LocalConfig.Instance.MaxCaseCount;
             }
 
             // use the hashset to fast iteration and save the case and word break result to List results
@@ -450,7 +459,7 @@ namespace CRFTrainingAuto
             Random rand = new Random();
 
             // results should contains LocalConfig.Instance.MaxCaseCount lines
-            while (tempResults.Count < LocalConfig.Instance.MaxCaseCount)
+            while (tempResults.Count < randomCaseCount)
             {
                 int index = rand.Next(0, inputs.Count);
 
@@ -470,11 +479,11 @@ namespace CRFTrainingAuto
             }
 
             // save to txt file, it's easyier to view cases
-            string randomTxtFilePath = Path.Combine(outputDir, Helper.NeutralFormat(Util.CorpusTxtFileNamePattern, LocalConfig.Instance.MaxCaseCount));
+            string randomTxtFilePath = Path.Combine(outputDir, Helper.NeutralFormat(Util.CorpusTxtFileNamePattern, randomCaseCount));
             File.WriteAllLines(randomTxtFilePath, results);
 
             // generate the excel file
-            string outputExcelFilePath = Path.Combine(outputDir, Helper.NeutralFormat(Util.CorpusExcelFileNamePattern, LocalConfig.Instance.MaxCaseCount));
+            string outputExcelFilePath = Path.Combine(outputDir, Helper.NeutralFormat(Util.CorpusExcelFileNamePattern, randomCaseCount));
             try
             {
                 ExcelGenerator.GenExcelFromTxtFile(randomTxtFilePath, outputExcelFilePath);
@@ -534,6 +543,9 @@ namespace CRFTrainingAuto
 
             // generate test cases to Pron_Polyphony.xml, used to put it to testcase folder
             ScriptGenerator.GenScript(testExcelFilePath, GenerateAction.TestCase, finalFolder, Util.TestCaseFileName);
+
+            // prepare test required dll files
+            PrepareTestEnvironment();
 
             // compile and run test
             CompileAndTestInFolder(finalFolder, generatedDataFile);
@@ -617,6 +629,8 @@ namespace CRFTrainingAuto
             string generatedDataFile = null;
             bool isNeedCleanTempDir = UpdateMappingAndPolyruleFiles(LocalConfig.Instance.CRFModelDir, LocalConfig.Instance.PolyRuleFilePath, out generatedDataFile);
 
+            PrepareTestEnvironment();
+
             CompileAndTestInFolder(verifyResultFolder, generatedDataFile, null, true);
 
             // clean the temp
@@ -649,16 +663,18 @@ namespace CRFTrainingAuto
 
             Helper.PrintSuccessMessage(Helper.NeutralFormat("All cases saved to {0}.", corpusAllFilePath));
 
-            Helper.PrintSuccessMessage(Helper.NeutralFormat("Start random select {0} cases from {1}", LocalConfig.Instance.MaxCaseCount, corpusAllFilePath));
+            int randomCaseCount = LocalConfig.Instance.MaxCaseCount + LocalConfig.Instance.BufferCaseCount;
+
+            Helper.PrintSuccessMessage(Helper.NeutralFormat("Start random select {0} cases from {1}", randomCaseCount, corpusAllFilePath));
 
             string outputExcelFilePath = SelectRandomCorpus(corpusAllFilePath, outputDir);
             if (!string.IsNullOrEmpty(outputExcelFilePath))
             {
-                Helper.PrintSuccessMessage(Helper.NeutralFormat("Random select {0} cases, saved to {1}", LocalConfig.Instance.MaxCaseCount, outputExcelFilePath));
+                Helper.PrintSuccessMessage(Helper.NeutralFormat("Random select {0} cases, saved to {1}", randomCaseCount, outputExcelFilePath));
             }
             else
             {
-                Helper.PrintSuccessMessage(Helper.NeutralFormat("{0} doesn't contains {1}  data, can't generate random data.", corpusAllFilePath, LocalConfig.Instance.MaxCaseCount));
+                Helper.PrintSuccessMessage(Helper.NeutralFormat("{0} doesn't contains {1}  data, can't generate random data.", corpusAllFilePath, randomCaseCount));
             }
         }
 
@@ -671,13 +687,6 @@ namespace CRFTrainingAuto
         /// <param name="genExcelReport">If true, generate the excel report based on test result.</param>
         public void CompileAndTestInFolder(string destDir, string srcDataFile = null, string featuresConfigPath = null, bool genExcelReport = false)
         {
-            // prepare the frontmeasure.exe running required dlls
-            if (!_isTestEnvironmentReady)
-            {
-                PrepareTestEnvironment();
-                _isTestEnvironmentReady = true;
-            }
-
             // generate training.config and feature.config for crf training
             GenCRFTrainingConfig(destDir, featuresConfigPath);
 
@@ -788,8 +797,10 @@ namespace CRFTrainingAuto
             string message;
             string crfMappingFilePath = Path.Combine(new DirectoryInfo(crfModelDir).Parent.FullName, Util.CRFMappingFileName);
 
+            var crfModels = CompilerHelper.LoadCRFModelMapping(crfMappingFilePath);
+
             // make sure ModelUsed folder contains only crf files in CRFLocalizedMapping.txt file, if not, the compiled dat will wrong
-            string[] crfFileNames = CompilerHelper.LoadCRFModelMapping(crfMappingFilePath).Select(c => c.CrfModelName).ToArray();
+            string[] crfFileNames = crfModels.Select(c => c.CrfModelName).ToArray();
 
             foreach (string crfPath in Directory.GetFiles(crfModelDir, Util.CRFFileSearchExtension))
             {
@@ -802,7 +813,7 @@ namespace CRFTrainingAuto
             }
 
             // update the mapping file and return the crf model folder should contained crf iles
-            CompilerHelper.UpdateCRFModelMappingFile(crfMappingFilePath, LocalConfig.Instance.OutputCRFName);
+            CompilerHelper.UpdateCRFModelMappingFile(crfMappingFilePath, LocalConfig.Instance.CharName, LocalConfig.Instance.OutputCRFName);
             SdCommand.SdRevertUnchangedFile(crfMappingFilePath, out message);
         }
 
@@ -847,25 +858,32 @@ namespace CRFTrainingAuto
             Helper.ThrowIfDirectoryNotExist(trainingFolder);
 
             string saveFilePath = Path.Combine(trainingFolder, Util.BugFixingFileName);
+            bool isFileExist = File.Exists(saveFilePath);
 
             int startId = Util.BugFixingXmlStartIndex + 1;
 
-            XmlDocument existingXmlDoc = null;
+            XmlScriptFile existingScript = null;
 
-            if (File.Exists(saveFilePath))
+            if (isFileExist)
             {
-                existingXmlDoc = new XmlDocument();
-                existingXmlDoc.Load(saveFilePath);
-
-                XmlNodeList childs = existingXmlDoc.DocumentElement.ChildNodes;
-
-                if (childs != null && childs.Count > 0)
+                try
                 {
-                    startId = Convert.ToInt32(childs.Item(childs.Count - 1).Attributes["id"].Value) + 1;
+                    existingScript = new XmlScriptFile();
+                    existingScript.Load(saveFilePath);
+
+                    if (existingScript.Items != null &&
+                        existingScript.Items.Count > 0)
+                    {
+                        startId = int.Parse(existingScript.Items.Last().Id) + 1;
+                    }
+                }
+                catch
+                {
+                    startId = Util.BugFixingXmlStartIndex + 1;
                 }
             }
 
-            XmlScriptFile results = new XmlScriptFile(LocalConfig.Instance.Lang);
+            existingScript = existingScript ?? new XmlScriptFile(LocalConfig.Instance.Lang);
 
             // append the cases
             var senAndProns = Util.GetSenAndPronFromBugFixingFile(bugFixingFilePath);
@@ -893,44 +911,39 @@ namespace CRFTrainingAuto
                         }
                     }
 
-                    results.Items.Add(item);
+                    existingScript.Items.Add(item);
                     ++startId;
                 }
             }
 
-            if (existingXmlDoc == null)
-            {
-                results.Save(saveFilePath, System.Text.Encoding.Unicode);
-            }
-            else
-            {
-                // if exist bug fixing file, save the new items to a temp path, delete it when merge with existing file
-                string tempFile = Path.GetTempFileName();
-
-                results.Save(tempFile, System.Text.Encoding.Unicode);
-
-                // append the temp file to existing file
-                XmlDocument tempDoc = new XmlDocument();
-                tempDoc.Load(tempFile);
-
-                foreach (XmlNode child in tempDoc.DocumentElement.ChildNodes)
-                {
-                    XmlNode newChild = existingXmlDoc.ImportNode(child, true);
-                    existingXmlDoc.DocumentElement.AppendChild(newChild);
-                }
-
-                existingXmlDoc.Save(saveFilePath);
-
-                File.Delete(tempFile);
-            }
+            string message = string.Empty;
 
             Console.WriteLine("Generate bug fixing file " + saveFilePath);
 
-            // recompile and run test
-            string generatedDataFile = null;
-            bool isNeedCleanTempDir = UpdateMappingAndPolyruleFiles(LocalConfig.Instance.CRFModelDir, LocalConfig.Instance.PolyRuleFilePath, out generatedDataFile);
+            if (isFileExist)
+            {
+                SdCommand.SdCheckoutFile(saveFilePath, out message);
+                Helper.PrintSuccessMessage(message);
 
-            CompileAndTestInFolder(outputDir, generatedDataFile);
+                existingScript.Save(saveFilePath, System.Text.Encoding.Unicode);
+
+                SdCommand.SdRevertUnchangedFile(saveFilePath, out message);
+            }
+            else
+            {
+                existingScript.Save(saveFilePath, System.Text.Encoding.Unicode);
+
+                SdCommand.SdAddFile(saveFilePath, out message);
+                Helper.PrintSuccessMessage(message);
+            }
+
+            // recompile and run test
+            string tempDatFile = null;
+            bool isNeedCleanTempDir = UpdateMappingAndPolyruleFiles(LocalConfig.Instance.CRFModelDir, LocalConfig.Instance.PolyRuleFilePath, out tempDatFile);
+
+            PrepareTestEnvironment();
+
+            CompileAndTestInFolder(outputDir, tempDatFile);
 
             // test the bugfixing item using the newly compiled dat file
             string bugFixingTestFile = Path.Combine(outputDir, Util.BugFixingTestFileName);
@@ -941,8 +954,6 @@ namespace CRFTrainingAuto
 
             if (File.Exists(generatedDatFile))
             {
-                string message = string.Empty;
-
                 // test with the original dat file
                 if (TestCRFModel(generatedDatFile,
                     bugFixingTestFile,
@@ -951,12 +962,24 @@ namespace CRFTrainingAuto
                 {
                     Helper.PrintSuccessMessage(message);
                 }
+
+                // check out the dat file
+                SdCommand.SdCheckoutFile(LocalConfig.Instance.LangDataPath, out message);
+
+                try
+                {
+                    File.Copy(generatedDatFile, LocalConfig.Instance.LangDataPath, true);
+                    Helper.PrintSuccessMessage(message);
+                }
+                catch
+                {
+                }
             }
 
             // clean the temp
             if (isNeedCleanTempDir)
             {
-                Helper.ForcedDeleteDir(Path.GetDirectoryName(generatedDataFile));
+                Helper.ForcedDeleteDir(Path.GetDirectoryName(tempDatFile));
             }
         }
 
@@ -1361,6 +1384,7 @@ namespace CRFTrainingAuto
             foreach (string dllPath in requiredDllPaths)
             {
                 string dllName = Path.GetFileName(dllPath);
+
                 if (!File.Exists(Path.Combine(frontendMeasureDir, dllName)))
                 {
                     File.Copy(dllPath, Path.Combine(frontendMeasureDir, dllName));
@@ -1434,7 +1458,6 @@ namespace CRFTrainingAuto
                 }
             }
         }
-
         #endregion
     }
 }

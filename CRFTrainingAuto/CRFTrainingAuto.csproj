@@ -111,6 +111,7 @@
   <ItemGroup>
     <EmbeddedResource Include="CRFTrainingAutoConfig.xsd">
     </EmbeddedResource>
+    <None Include="ClassDiagram1.cd" />
     <None Include="Config\configs\bei.config" />
     <None Include="Config\configs\cha.config" />
     <None Include="Config\configs\chang.config" />
