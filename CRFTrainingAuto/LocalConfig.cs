@@ -471,6 +471,11 @@ namespace CRFTrainingAuto
                 {
                     throw new FormatException("MaxCaseLength is not a number!");
                 }
+
+                if (this._maxCaseLength <= this._minCaseLength)
+                {
+                    throw new Exception("MaxCaseLength must greaterr than MinCaseLength!");
+                }
             }
 
             node = xmlDoc.SelectSingleNode("//tts:TrainingChar/tts:MaxCaseCount", nsmgr);

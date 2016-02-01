@@ -158,19 +158,25 @@ namespace CRFTrainingAuto
                 foreach (KeyValuePair<SentenceAndWBResult, string> item in caseAndProns)
                 {
                     xlWorkSheet.Cells[rowIndex, Util.ExcelCaseColIndex] = item.Key.Content;
-                    xlWorkSheet.Cells[rowIndex, Util.ExcelCorrectPronColIndex] = item.Value;
 
-                    Excel.Range xlRange = (Excel.Range)xlWorkSheet.Cells[rowIndex, 1];
+                    Excel.Range xlRange = (Excel.Range)xlWorkSheet.Cells[rowIndex, Util.ExcelCaseColIndex];
                     int startIndex = item.Key.Content.GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, item.Key.WBResult);
                     if (startIndex > -1)
                     {
-                        xlRange.Characters[startIndex + 1, 1].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
+                        xlRange.Characters[startIndex + 1, Util.ExcelCaseColIndex].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
                     }
 
+                    xlWorkSheet.Cells[rowIndex, Util.ExcelCorrectPronColIndex] = item.Value;
                     xlWorkSheet.Cells[rowIndex, Util.ExcelWbColIndex] = item.Key.WBResult.SpaceSeparate();
 
                     ++rowIndex;
                 }
+
+                xlWorkSheet.Columns.AutoFit();
+
+                string columnValue = string.Format("A{0}", Util.ExcelCaseColIndex);
+                xlWorkSheet.Range[columnValue].EntireColumn.WrapText = true;
+                xlWorkSheet.Range[columnValue].EntireColumn.ColumnWidth = Util.ExcelCaseColWidth;
 
                 // hide the word break result column
                 Excel.Range range = (Excel.Range)xlWorkSheet.Columns[Util.ExcelWbColIndex, Type.Missing];
@@ -279,7 +285,7 @@ namespace CRFTrainingAuto
                 GenExcelFromCaseAndProns(trainingCaseAndProns, trainingExcelFilePath);
 
                 // generate excel for test cases, e.g. corpusCountFilePath = "corpus.500.xls"
-                int testCount = LocalConfig.Instance.MaxCaseCount - LocalConfig.Instance.NCrossCaseCount;
+                int testCount = LocalConfig.Instance.MaxCaseCount + LocalConfig.Instance.BufferCaseCount - LocalConfig.Instance.NCrossCaseCount;
                 testExcelFilePath = Path.Combine(outputDir, Helper.NeutralFormat(Util.CorpusExcelFileNamePattern, testCount));
                 var testCaseAndProns = caseAndProns.Where((input, index) => (index >= LocalConfig.Instance.NCrossCaseCount));
 
@@ -416,17 +422,18 @@ namespace CRFTrainingAuto
                             lineNumber = allLines.IndexOf(inputLines[i]);
                         }
 
-                        xlWorkSheet.Cells[rowIndex, FirstColNum] = lineNumber + 1;
+                        // generated excel has one title row, so lineNumber should plus 2, 
+                        xlWorkSheet.Cells[rowIndex, FirstColNum] = lineNumber + 2;
 
                         xlWorkSheet.Cells[rowIndex, SecondColNum] = inputLines[i];
 
                         // highlight the target cahr
-                        Excel.Range xlRange = (Excel.Range)xlWorkSheet.Cells[rowIndex, 1];
+                        Excel.Range xlRange = (Excel.Range)xlWorkSheet.Cells[rowIndex, SecondColNum];
                         int startIndex = inputLines[i].GetSingleCharIndexOfLine(LocalConfig.Instance.CharName, wordBreaker);
 
                         if (startIndex > -1)
                         {
-                            xlRange.Characters[startIndex + 1, SecondColNum].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
+                            xlRange.Characters[startIndex + 1, 1].Font.Color = System.Drawing.ColorTranslator.ToOle(System.Drawing.Color.Red);
                         }
 
                         var findResult = LocalConfig.Instance.Prons.FirstOrDefault(p => string.Equals(p.Value, expectedLines[i]));

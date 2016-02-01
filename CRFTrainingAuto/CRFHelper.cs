@@ -335,9 +335,10 @@ namespace CRFTrainingAuto
                         bool isSentenceMatch = false;
                         string[] wbResult = null;
 
-                        // check the case's length
+                        // check the case's length range
                         if (string.IsNullOrEmpty(sentence) ||
-                            sentence.Length < LocalConfig.Instance.MinCaseLength)
+                            sentence.Length < LocalConfig.Instance.MinCaseLength ||
+                            sentence.Length > LocalConfig.Instance.MaxCaseLength)
                         {
                             continue;
                         }
@@ -1379,7 +1380,7 @@ namespace CRFTrainingAuto
                     Path.Combine(LocalConfig.Instance.OfflineToolPath, "System.Speech.dll"),
                     Path.Combine(frontendMeasureDir, "Avatar", "HostCommon.dll"),
                     Path.Combine(frontendMeasureDir, "Avatar", "TestEngine_UTest.dll")
-                };
+            };
 
             foreach (string dllPath in requiredDllPaths)
             {
