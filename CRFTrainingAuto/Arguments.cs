@@ -399,9 +399,9 @@ namespace CRFTrainingAuto
             // check config file if specified
             if (!string.IsNullOrEmpty(_configPath))
             {
-                _configPath = Util.GetAbsolutePath(_configPath);
                 if (!File.Exists(_configPath))
                 {
+                    _configPath = Util.GetAbsolutePath(_configPath);
                     yield return Helper.NeutralFormat("{0} not exist!", _configPath);
                 }
             }

@@ -186,7 +186,7 @@ namespace CRFTrainingAuto
                         // if cannot find the single char index, skip this case
                         if (charIndex == -1)
                         {
-                            continue;
+                            throw new Exception(Helper.NeutralFormat("", testCase));
                         }
 
                         int charCount = 1;
